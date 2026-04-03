@@ -40,10 +40,6 @@ export const Sidebar: FC = () => {
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="px-6 pb-4 border-t border-border-subtle pt-4">
-        <span className="text-xs text-text-tertiary">Built as proof-of-work</span>
-      </div>
     </aside>
   )
 }

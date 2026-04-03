@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Header } from '@/components/layout/Header'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { MetricCard } from '@/components/ui/MetricCard'
 import { SignalFeed } from '@/components/gtm/SignalFeed'
 import { ProspectCard } from '@/components/gtm/ProspectCard'
 import { OutreachDraft } from '@/components/gtm/OutreachDraft'
-import { ROICalculator } from '@/components/gtm/ROICalculator'
-import type { Signal, Prospect, Capability } from '@/types'
+import { ROICalculatorInputs, ROICalculatorResults } from '@/components/gtm/ROICalculator'
+import type { Signal, Prospect, Capability, ROIResult } from '@/types'
 
 // Minimal capability data for OutreachDraft — avoids extra API call
 const CAPABILITY_MAP: Record<string, Capability> = {
@@ -34,6 +34,7 @@ const GTMPage = (): React.JSX.Element => {
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null)
   const [showOutreach, setShowOutreach] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [roiResult, setRoiResult] = useState<ROIResult | null>(null)
 
   useEffect(() => {
     const fetchData = async (): Promise<void> => {
@@ -63,6 +64,10 @@ const GTMPage = (): React.JSX.Element => {
     setSelectedSignal(signal)
     setShowOutreach(true)
   }
+
+  const handleRoiResultChange = useCallback((result: ROIResult | null): void => {
+    setRoiResult(result)
+  }, [])
 
   const matchedCapabilities = useMemo((): Capability[] => {
     if (!selectedSignal) return []
@@ -113,8 +118,9 @@ const GTMPage = (): React.JSX.Element => {
             <MetricCard value={`${euDaysRemaining}d`} label="EU AI Act Deadline" trend={{ value: `${euDaysRemaining} days`, positive: euDaysRemaining > 90 }} />
           </div>
 
-          <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-7">
+          {/* Row 1: Signal Feed (left) + ROI Inputs (right) */}
+          <div className="grid grid-cols-5 gap-6">
+            <div className="col-span-3">
               <SignalFeed
                 signals={signals}
                 onSelectSignal={handleSelectSignal}
@@ -122,10 +128,15 @@ const GTMPage = (): React.JSX.Element => {
                 selectedSignalId={selectedSignal?.id}
               />
             </div>
-            <div className="col-span-5">
-              <ROICalculator />
+            <div className="col-span-2">
+              <ROICalculatorInputs onResultChange={handleRoiResultChange} />
             </div>
           </div>
+
+          {/* Row 2: ROI Results — full width */}
+          {roiResult && (
+            <ROICalculatorResults result={roiResult} />
+          )}
 
           {showOutreach && selectedSignal && (
             <OutreachDraft signal={selectedSignal} capabilities={matchedCapabilities} />

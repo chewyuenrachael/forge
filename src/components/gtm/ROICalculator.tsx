@@ -28,7 +28,58 @@ const REGULATORY_OPTIONS: Array<{ value: ROIInput['regulatoryExposure'][number];
   { value: 'none', label: 'None' },
 ]
 
+// ─── Combined ROI Calculator (inputs + results) ─────────────────────────
+
 export const ROICalculator: FC<ROICalculatorProps> = ({ onCalculate }) => {
+  const { input, result, updateField, toggleRegulatory } = useROIState(onCalculate)
+  return (
+    <div>
+      <h2 className="font-display text-lg font-semibold text-text-primary mb-4">ROI Calculator</h2>
+      <ROIInputsCard input={input} updateField={updateField} toggleRegulatory={toggleRegulatory} />
+      {result && <ROIResultsPanel result={result} />}
+    </div>
+  )
+}
+
+// ─── Inputs-only component ──────────────────────────────────────────────
+
+interface ROICalculatorInputsProps {
+  onResultChange?: (result: ROIResult | null) => void
+}
+
+export const ROICalculatorInputs: FC<ROICalculatorInputsProps> = ({ onResultChange }) => {
+  const { input, result, updateField, toggleRegulatory } = useROIState()
+
+  useEffect(() => {
+    onResultChange?.(result)
+  }, [result, onResultChange])
+
+  return (
+    <div>
+      <h2 className="font-display text-lg font-semibold text-text-primary mb-4">ROI Calculator</h2>
+      <ROIInputsCard input={input} updateField={updateField} toggleRegulatory={toggleRegulatory} />
+    </div>
+  )
+}
+
+// ─── Results-only component ─────────────────────────────────────────────
+
+interface ROICalculatorResultsProps {
+  result: ROIResult
+}
+
+export const ROICalculatorResults: FC<ROICalculatorResultsProps> = ({ result }) => {
+  return <ROIResultsPanel result={result} />
+}
+
+// ─── Shared state hook ──────────────────────────────────────────────────
+
+function useROIState(onCalculate?: (result: ROIResult) => void): {
+  input: ROIInput
+  result: ROIResult | null
+  updateField: <K extends keyof ROIInput>(key: K, value: ROIInput[K]) => void
+  toggleRegulatory: (value: ROIInput['regulatoryExposure'][number]) => void
+} {
   const [input, setInput] = useState<ROIInput>({
     currentHallucinationRate: 12,
     monthlyInferenceSpend: 200_000,
@@ -69,141 +120,157 @@ export const ROICalculator: FC<ROICalculatorProps> = ({ onCalculate }) => {
     })
   }
 
-  const chartData = result ? [
+  return { input, result, updateField, toggleRegulatory }
+}
+
+// ─── Inputs Card (shared rendering) ─────────────────────────────────────
+
+interface ROIInputsCardProps {
+  input: ROIInput
+  updateField: <K extends keyof ROIInput>(key: K, value: ROIInput[K]) => void
+  toggleRegulatory: (value: ROIInput['regulatoryExposure'][number]) => void
+}
+
+const ROIInputsCard: FC<ROIInputsCardProps> = ({ input, updateField, toggleRegulatory }) => {
+  return (
+    <Card className="p-6 space-y-5">
+      <SliderField label="Monthly Inference Spend" value={input.monthlyInferenceSpend} min={0} max={5_000_000} step={10_000}
+        format={formatCurrency} onChange={(v) => updateField('monthlyInferenceSpend', v)} />
+      <SliderField label="Monthly Annotation Spend" value={input.monthlyAnnotationSpend} min={0} max={1_000_000} step={5_000}
+        format={formatCurrency} onChange={(v) => updateField('monthlyAnnotationSpend', v)} />
+      <SliderField label="Monthly Guardrail Spend" value={input.monthlyGuardrailSpend} min={0} max={500_000} step={5_000}
+        format={formatCurrency} onChange={(v) => updateField('monthlyGuardrailSpend', v)} />
+      <SliderField label="Hallucination Rate (%)" value={input.currentHallucinationRate} min={0} max={50} step={1}
+        format={(v) => `${v}%`} onChange={(v) => updateField('currentHallucinationRate', v)} />
+
+      <div className="flex items-center justify-between">
+        <span className="text-xs uppercase tracking-wider text-text-secondary font-medium">Uses Reasoning Models</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={input.usesReasoningModels}
+          onClick={() => updateField('usesReasoningModels', !input.usesReasoningModels)}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-150 ${
+            input.usesReasoningModels ? 'bg-accent-amber' : 'bg-elevated border border-border-default'
+          }`}
+        >
+          <span className={`inline-block h-4 w-4 rounded-full bg-white transition-transform duration-150 ${
+            input.usesReasoningModels ? 'translate-x-6' : 'translate-x-1'
+          }`} />
+        </button>
+      </div>
+
+      {input.usesReasoningModels && (
+        <SliderField label="Monthly Reasoning Token Spend" value={input.monthlyReasoningTokens} min={0} max={3_000_000} step={10_000}
+          format={formatCurrency} onChange={(v) => updateField('monthlyReasoningTokens', v)} />
+      )}
+
+      <SliderField label="Compliance Deadline (months)" value={input.complianceDeadlineMonths} min={1} max={36} step={1}
+        format={(v) => `${v}mo`} onChange={(v) => updateField('complianceDeadlineMonths', v)} />
+
+      <div>
+        <span className="block text-xs uppercase tracking-wider text-text-secondary font-medium mb-2">Regulatory Exposure</span>
+        <div className="flex flex-wrap gap-2">
+          {REGULATORY_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => toggleRegulatory(opt.value)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors duration-150 ${
+                input.regulatoryExposure.includes(opt.value)
+                  ? 'border-accent-amber bg-accent-amber/15 text-accent-amber'
+                  : 'border-border-default text-text-secondary hover:text-text-primary hover:bg-elevated'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+// ─── Results Panel (shared rendering) ────────────────────────────────────
+
+interface ROIResultsPanelProps {
+  result: ROIResult
+}
+
+const ROIResultsPanel: FC<ROIResultsPanelProps> = ({ result }) => {
+  const chartData = [
     { name: 'Hallucination', before: result.hallucinationSavings.before, after: result.hallucinationSavings.after },
     { name: 'Inference', before: result.inferenceSavings.before, after: result.inferenceSavings.after },
     { name: 'Annotation', before: result.annotationSavings.before, after: result.annotationSavings.after },
     { name: 'Guardrails', before: result.guardrailSavings.before, after: result.guardrailSavings.after },
-  ] : []
+  ]
 
   return (
-    <div>
-      <h2 className="font-display text-lg font-semibold text-text-primary mb-4">ROI Calculator</h2>
-
-      <Card className="p-6 space-y-5">
-        <SliderField label="Monthly Inference Spend" value={input.monthlyInferenceSpend} min={0} max={5_000_000} step={10_000}
-          format={formatCurrency} onChange={(v) => updateField('monthlyInferenceSpend', v)} />
-        <SliderField label="Monthly Annotation Spend" value={input.monthlyAnnotationSpend} min={0} max={1_000_000} step={5_000}
-          format={formatCurrency} onChange={(v) => updateField('monthlyAnnotationSpend', v)} />
-        <SliderField label="Monthly Guardrail Spend" value={input.monthlyGuardrailSpend} min={0} max={500_000} step={5_000}
-          format={formatCurrency} onChange={(v) => updateField('monthlyGuardrailSpend', v)} />
-        <SliderField label="Hallucination Rate (%)" value={input.currentHallucinationRate} min={0} max={50} step={1}
-          format={(v) => `${v}%`} onChange={(v) => updateField('currentHallucinationRate', v)} />
-
-        <div className="flex items-center justify-between">
-          <span className="text-xs uppercase tracking-wider text-text-secondary font-medium">Uses Reasoning Models</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={input.usesReasoningModels}
-            onClick={() => updateField('usesReasoningModels', !input.usesReasoningModels)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-150 ${
-              input.usesReasoningModels ? 'bg-accent-amber' : 'bg-elevated border border-border-default'
-            }`}
-          >
-            <span className={`inline-block h-4 w-4 rounded-full bg-white transition-transform duration-150 ${
-              input.usesReasoningModels ? 'translate-x-6' : 'translate-x-1'
-            }`} />
-          </button>
+    <Card className="p-8 mt-6">
+      <div className="text-center mb-8">
+        <div className="font-mono font-semibold text-4xl text-text-primary">
+          {formatCurrencyFull(result.totalAnnualSaving)}
         </div>
+        <div className="text-xs uppercase tracking-wider text-text-tertiary font-medium mt-2">Estimated Annual Savings</div>
+        <div className="mt-3 text-sm text-text-primary">
+          <span className="font-mono font-semibold text-accent-amber">{result.roi.toFixed(1)}x</span> return on engagement investment
+        </div>
+        <div className="text-xs text-text-secondary mt-1">
+          Engagement cost: {formatCurrency(result.estimatedEngagementCost.low)}–{formatCurrency(result.estimatedEngagementCost.high)}
+        </div>
+      </div>
 
-        {input.usesReasoningModels && (
-          <SliderField label="Monthly Reasoning Token Spend" value={input.monthlyReasoningTokens} min={0} max={3_000_000} step={10_000}
-            format={formatCurrency} onChange={(v) => updateField('monthlyReasoningTokens', v)} />
-        )}
+      <div className="mb-8" style={{ height: 240 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 40 }}>
+            <XAxis type="number" tickFormatter={(v: number) => formatCurrency(v)}
+              tick={{ fill: '#999990', fontSize: 11 }} axisLine={{ stroke: '#D0CCC4' }} />
+            <YAxis type="category" dataKey="name" width={90}
+              tick={{ fill: '#999990', fontSize: 11 }} axisLine={{ stroke: '#D0CCC4' }} />
+            <Tooltip formatter={(v) => formatCurrencyFull(Number(v))}
+              contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #D0CCC4', borderRadius: 6, color: '#1A1A1A' }} />
+            <Legend wrapperStyle={{ fontSize: 11, color: '#666660' }} />
+            <Bar dataKey="before" name="Before" fill="#C45A3C" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="after" name="After" fill="#3D6B35" radius={[0, 4, 4, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
 
-        <SliderField label="Compliance Deadline (months)" value={input.complianceDeadlineMonths} min={1} max={36} step={1}
-          format={(v) => `${v}mo`} onChange={(v) => updateField('complianceDeadlineMonths', v)} />
-
-        <div>
-          <span className="block text-xs uppercase tracking-wider text-text-secondary font-medium mb-2">Regulatory Exposure</span>
-          <div className="flex flex-wrap gap-2">
-            {REGULATORY_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => toggleRegulatory(opt.value)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors duration-150 ${
-                  input.regulatoryExposure.includes(opt.value)
-                    ? 'border-accent-amber bg-accent-amber/15 text-accent-amber'
-                    : 'border-border-default text-text-secondary hover:text-text-primary hover:bg-elevated'
-                }`}
-              >
-                {opt.label}
-              </button>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border-subtle">
+              <th className="px-3 py-2 text-left text-xs uppercase tracking-wider text-text-secondary font-medium">Category</th>
+              <th className="px-3 py-2 text-right text-xs uppercase tracking-wider text-text-secondary font-medium">Annual Saving</th>
+              <th className="px-3 py-2 text-left text-xs uppercase tracking-wider text-text-secondary font-medium">Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              { label: 'Hallucination Reduction', line: result.hallucinationSavings },
+              { label: 'Inference Optimization', line: result.inferenceSavings },
+              { label: 'Annotation Cost', line: result.annotationSavings },
+              { label: 'Guardrail Efficiency', line: result.guardrailSavings },
+            ].map((row) => (
+              <tr key={row.label} className="border-b border-border-subtle">
+                <td className="px-3 py-2 text-text-primary">{row.label}</td>
+                <td className="px-3 py-2 text-right font-mono text-text-primary">{formatCurrencyFull(row.line.annualSaving)}</td>
+                <td className="px-3 py-2 text-xs text-text-tertiary max-w-md">{row.line.source || '—'}</td>
+              </tr>
             ))}
-          </div>
-        </div>
-      </Card>
+          </tbody>
+        </table>
+      </div>
 
-      {result && (
-        <Card className="p-6 mt-4">
-          <div className="text-center mb-6">
-            <div className="font-display font-semibold text-4xl text-accent-amber">
-              <span className="font-mono">{formatCurrencyFull(result.totalAnnualSaving)}</span>
-            </div>
-            <div className="text-xs uppercase tracking-wider text-text-secondary font-medium mt-1">Estimated Annual Savings</div>
-            <div className="mt-2 text-sm text-text-primary">
-              <span className="font-mono font-semibold text-accent-amber">{result.roi.toFixed(1)}x</span> return on engagement investment
-            </div>
-            <div className="text-xs text-text-tertiary mt-1">
-              Engagement cost: {formatCurrency(result.estimatedEngagementCost.low)}–{formatCurrency(result.estimatedEngagementCost.high)}
-            </div>
-          </div>
-
-          <div className="mb-6" style={{ height: 220 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 20 }}>
-                <XAxis type="number" tickFormatter={(v: number) => formatCurrency(v)}
-                  tick={{ fill: '#999990', fontSize: 11 }} axisLine={{ stroke: '#D0CCC4' }} />
-                <YAxis type="category" dataKey="name" width={80}
-                  tick={{ fill: '#999990', fontSize: 11 }} axisLine={{ stroke: '#D0CCC4' }} />
-                <Tooltip formatter={(v) => formatCurrencyFull(Number(v))}
-                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #D0CCC4', borderRadius: 6, color: '#1A1A1A' }} />
-                <Legend wrapperStyle={{ fontSize: 11, color: '#666660' }} />
-                <Bar dataKey="before" name="Before" fill="#C45A3C" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="after" name="After" fill="#3D6B35" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border-subtle">
-                  <th className="px-2 py-2 text-left text-xs uppercase tracking-wider text-text-secondary font-medium">Category</th>
-                  <th className="px-2 py-2 text-right text-xs uppercase tracking-wider text-text-secondary font-medium">Annual Saving</th>
-                  <th className="px-2 py-2 text-left text-xs uppercase tracking-wider text-text-secondary font-medium">Source</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { label: 'Hallucination Reduction', line: result.hallucinationSavings },
-                  { label: 'Inference Optimization', line: result.inferenceSavings },
-                  { label: 'Annotation Cost', line: result.annotationSavings },
-                  { label: 'Guardrail Efficiency', line: result.guardrailSavings },
-                ].map((row) => (
-                  <tr key={row.label} className="border-b border-border-subtle">
-                    <td className="px-2 py-2 text-text-primary">{row.label}</td>
-                    <td className="px-2 py-2 text-right font-mono text-text-primary">{formatCurrencyFull(row.line.annualSaving)}</td>
-                    <td className="px-2 py-2 text-xs text-text-tertiary">{row.line.source || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-4 pt-4 border-t border-border-subtle">
-            <h3 className="text-xs uppercase tracking-wider text-text-secondary font-medium mb-2">Compliance Assessment</h3>
-            <Badge variant={result.complianceValue.urgency.startsWith('Critical') ? 'red' : result.complianceValue.urgency.startsWith('High') ? 'amber' : 'gray'}>
-              {result.complianceValue.urgency.split(':')[0]}
-            </Badge>
-            <p className="text-sm text-text-secondary mt-2">{result.complianceValue.riskReduction}</p>
-            <p className="text-xs text-text-tertiary mt-1">{result.complianceValue.urgency}</p>
-          </div>
-        </Card>
-      )}
-    </div>
+      <div className="mt-6 pt-4 border-t border-border-subtle">
+        <h3 className="text-xs uppercase tracking-wider text-text-secondary font-medium mb-2">Compliance Assessment</h3>
+        <Badge variant={result.complianceValue.urgency.startsWith('Critical') ? 'red' : result.complianceValue.urgency.startsWith('High') ? 'amber' : 'gray'}>
+          {result.complianceValue.urgency.split(':')[0]}
+        </Badge>
+        <p className="text-sm text-text-secondary mt-2">{result.complianceValue.riskReduction}</p>
+        <p className="text-xs text-text-tertiary mt-1">{result.complianceValue.urgency}</p>
+      </div>
+    </Card>
   )
 }
 
