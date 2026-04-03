@@ -1,10 +1,12 @@
-import { type FC } from 'react'
+import { type FC, type ReactNode } from 'react'
 
 type BadgeVariant = 'amber' | 'blue' | 'green' | 'red' | 'purple' | 'gray'
+type BadgeSize = 'sm' | 'md'
 
 interface BadgeProps {
-  children: React.ReactNode
-  variant?: BadgeVariant
+  children: ReactNode
+  variant: BadgeVariant
+  size?: BadgeSize
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
@@ -16,9 +18,14 @@ const variantClasses: Record<BadgeVariant, string> = {
   gray: 'bg-gray-500/15 text-gray-400',
 }
 
-export const Badge: FC<BadgeProps> = ({ children, variant = 'gray' }) => {
+const sizeClasses: Record<BadgeSize, string> = {
+  sm: 'px-1.5 py-0.5 text-[10px]',
+  md: 'px-2 py-0.5 text-xs',
+}
+
+export const Badge: FC<BadgeProps> = ({ children, variant, size = 'md' }) => {
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md ${variantClasses[variant]}`}>
+    <span className={`inline-flex items-center font-medium rounded-md ${variantClasses[variant]} ${sizeClasses[size]}`}>
       {children}
     </span>
   )
