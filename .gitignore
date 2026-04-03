@@ -23,6 +23,9 @@
 # database
 forge.db
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 
 # debug
 npm-debug.log*
