@@ -2,11 +2,12 @@ import { type FC, type ReactNode } from 'react'
 
 interface PageContainerProps {
   children: ReactNode
+  className?: string
 }
 
-export const PageContainer: FC<PageContainerProps> = ({ children }) => {
+export const PageContainer: FC<PageContainerProps> = ({ children, className = '' }) => {
   return (
-    <div className="max-w-[1400px] mx-auto px-8 py-6">
+    <div className={`max-w-[1400px] mx-auto px-8 py-6 ${className}`}>
       {children}
     </div>
   )
