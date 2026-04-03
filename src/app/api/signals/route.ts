@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAllSignals, getSignalsByType } from '@/lib/signals'
+import { getAllSignals, getSignalsByType, getAllProspects } from '@/lib/signals'
+
+const VALID_SIGNAL_TYPES = ['regulatory', 'competitor', 'prospect', 'conference', 'research'] as const
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url)
+    const resource = searchParams.get('resource')
+
+    if (resource === 'prospects') {
+      const data = getAllProspects()
+      return NextResponse.json({ data })
+    }
+
     const type = searchParams.get('type')
 
-    if (type && !['regulatory', 'competitor', 'prospect', 'conference', 'research'].includes(type)) {
+    if (type && !VALID_SIGNAL_TYPES.includes(type as typeof VALID_SIGNAL_TYPES[number])) {
       return NextResponse.json(
         { error: 'Invalid signal type', code: 'INVALID_TYPE' },
         { status: 400 }
@@ -14,7 +23,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     const data = type
-      ? getSignalsByType(type as 'regulatory' | 'competitor' | 'prospect' | 'conference' | 'research')
+      ? getSignalsByType(type as typeof VALID_SIGNAL_TYPES[number])
       : getAllSignals()
     return NextResponse.json({ data })
   } catch (error) {
