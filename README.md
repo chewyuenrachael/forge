@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Forge — Goodfire Commercial Intelligence OS
 
-## Getting Started
+Forge transforms Goodfire's frontier interpretability research into a shared operational layer for every customer-facing role. It is a cross-functional intelligence system with five interfaces built on a unified Research Knowledge Graph.
 
-First, run the development server:
+## Quick Start
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Optionally, add an Anthropic API key to `.env.local` for AI-powered features:
+```
+ANTHROPIC_API_KEY=your_key_here
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The app works fully in demo mode without an API key.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Interfaces
 
-## Learn More
+- **Dashboard** — Research capability overview, timeline, and solution map
+- **GTM Command Center** — Signal detection, prospect intelligence, ROI calculator with real Goodfire benchmarks
+- **Solution Architect** — Three-stage engagement scoper: intake → capability match → simulation → proposal
+- **Narrative Engine** — Discourse monitoring, content calendar, audience-specific framing
+- **Research Delivery Hub** — Active engagement tracking and milestone management
+- **Operations** — Cross-functional metrics and pipeline visibility
 
-To learn more about Next.js, take a look at the following resources:
+## Data Integrity
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Every metric, benchmark, and capability reference in Forge traces to Goodfire's published research. The ROI Calculator uses conservative estimates grounded in:
+- RLFR (Prasad et al., Feb 2026): 58% hallucination reduction, 90x cheaper than LLM-as-judge
+- Reasoning Theater (Boppana et al., Mar 2026): 68% token savings on MMLU via probe-guided early exit
+- Rakuten PII Detection (Nguyen et al., Oct 2025): SAE probes deployed at 44M+ users
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Built By
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Rachael Chew — [rachaelchew.com](https://rachaelchew.com)
+Built as proof-of-work for Goodfire.
