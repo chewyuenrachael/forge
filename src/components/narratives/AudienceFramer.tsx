@@ -14,7 +14,7 @@ const AUDIENCE_TABS = [
   { id: 'ml_engineer', label: 'ML Engineers' },
   { id: 'cto', label: 'CTOs' },
   { id: 'compliance', label: 'Policy/Compliance' },
-  { id: 'general', label: 'General AI' },
+  { id: 'general', label: 'AI Community & Public' },
 ]
 
 interface FrameContent {

@@ -1,7 +1,7 @@
 'use client'
 
 import { type FC, useState, useEffect, useCallback } from 'react'
-import { FileText } from 'lucide-react'
+import { FileText, Check, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -11,6 +11,7 @@ interface ProposalPreviewProps {
   intake: IntakeFormData
   matches: SolutionMatch[]
   simulation: SolutionSimulation
+  onSaved?: () => void
 }
 
 const confidenceVariant = (confidence: string): 'green' | 'amber' | 'gray' => {
@@ -51,18 +52,35 @@ function formatDate(): string {
   return new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-export const ProposalPreview: FC<ProposalPreviewProps> = ({ intake, matches, simulation }) => {
-  const [showToast, setShowToast] = useState(false)
+export const ProposalPreview: FC<ProposalPreviewProps> = ({ intake, matches, simulation, onSaved }) => {
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
-  const handleExport = useCallback((): void => {
-    setShowToast(true)
-  }, [])
+  const handleSave = useCallback(async (): Promise<void> => {
+    setSaveState('saving')
+    try {
+      const res = await fetch('/api/proposals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          partner_name: intake.partnerName,
+          intake_data: intake,
+          matches,
+          simulation,
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to save')
+      setSaveState('saved')
+      onSaved?.()
+    } catch {
+      setSaveState('error')
+    }
+  }, [intake, matches, simulation, onSaved])
 
   useEffect(() => {
-    if (!showToast) return
-    const timer = setTimeout(() => setShowToast(false), 3000)
+    if (saveState !== 'saved' && saveState !== 'error') return
+    const timer = setTimeout(() => setSaveState('idle'), 2500)
     return () => clearTimeout(timer)
-  }, [showToast])
+  }, [saveState])
 
   const highMatches = matches.filter((m) => m.matchLevel === 'high')
   const mediumMatches = matches.filter((m) => m.matchLevel === 'medium')
@@ -230,21 +248,31 @@ export const ProposalPreview: FC<ProposalPreviewProps> = ({ intake, matches, sim
           </div>
         </div>
 
-        {/* Export */}
-        <div className="flex justify-end pt-4 border-t border-border-subtle">
-          <Button variant="secondary" onClick={handleExport}>
-            Export Proposal
+        {/* Save */}
+        <div className="flex justify-end gap-3 pt-4 border-t border-border-subtle">
+          {saveState === 'saved' && (
+            <span className="flex items-center gap-1.5 text-sm text-[#3D6B35]">
+              <Check size={14} /> Saved
+            </span>
+          )}
+          {saveState === 'error' && (
+            <span className="text-sm text-[#8A2020]">Failed to save</span>
+          )}
+          <Button
+            variant="primary"
+            onClick={() => void handleSave()}
+            disabled={saveState === 'saving' || saveState === 'saved'}
+          >
+            {saveState === 'saving' ? (
+              <span className="flex items-center gap-1.5">
+                <Loader2 size={14} className="animate-spin" /> Saving...
+              </span>
+            ) : (
+              'Save Proposal'
+            )}
           </Button>
         </div>
       </Card>
-
-      {/* Toast */}
-      {showToast && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-lg border border-border-default bg-surface px-4 py-3 shadow-lg">
-          <p className="text-sm text-text-primary">Export coming soon</p>
-          <p className="text-xs text-text-secondary">PDF and DOCX export will be available in a future release.</p>
-        </div>
-      )}
     </>
   )
 }

@@ -318,7 +318,7 @@ export function seedDatabase(db: Database.Database): void {
     insertAudience.run(
       'aud-general',
       'general',
-      'General AI Discourse',
+      'AI Community & Public',
       JSON.stringify([
         'AI safety and trustworthiness concerns',
         'Understanding vs black-box AI',

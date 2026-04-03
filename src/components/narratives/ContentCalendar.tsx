@@ -4,7 +4,6 @@ import { type FC, useState, useMemo } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
 import type { ContentCalendarItem } from '@/types'
 
 interface ContentCalendarProps {
@@ -74,12 +73,22 @@ export const ContentCalendar: FC<ContentCalendarProps> = ({ items, selectedDate,
           {MONTH_NAMES[currentMonth] ?? ''} {currentYear}
         </h2>
         <div className="flex gap-1">
-          <Button variant="ghost" className="h-7 w-7 p-0 flex items-center justify-center" onClick={handlePrev}>
+          <button
+            type="button"
+            onClick={handlePrev}
+            className="h-7 w-7 flex items-center justify-center rounded-md text-text-secondary hover:text-text-primary hover:bg-[#F0EDE6] transition-colors duration-150"
+            aria-label="Previous month"
+          >
             <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" className="h-7 w-7 p-0 flex items-center justify-center" onClick={handleNext}>
+          </button>
+          <button
+            type="button"
+            onClick={handleNext}
+            className="h-7 w-7 flex items-center justify-center rounded-md text-text-secondary hover:text-text-primary hover:bg-[#F0EDE6] transition-colors duration-150"
+            aria-label="Next month"
+          >
             <ChevronRight className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       </div>
 

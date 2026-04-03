@@ -197,6 +197,26 @@ export interface ProjectedOutcome {
   basis: string
 }
 
+// ─── Proposal History Types ─────────────────────────────────────────
+
+export interface SavedProposal {
+  id: string
+  partner_name: string
+  intake_data: IntakeFormData
+  matches: SolutionMatch[]
+  simulation: SolutionSimulation
+  created_at: string
+  title: string
+}
+
+export interface SavedProposalSummary {
+  id: string
+  partner_name: string
+  title: string
+  created_at: string
+  match_count: number
+}
+
 // ─── Narrative Engine Types ──────────────────────────────────────────
 
 export interface NarrativeOpportunity {

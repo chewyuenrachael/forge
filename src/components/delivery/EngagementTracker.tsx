@@ -1,6 +1,6 @@
 'use client'
 
-import { type FC, useState, useCallback } from 'react'
+import React, { type FC, useState, useCallback } from 'react'
 import {
   ChevronRight,
   CheckCircle2,
@@ -241,66 +241,67 @@ export const EngagementTracker: FC<EngagementTrackerProps> = ({
               const pct = total > 0 ? Math.round((completed / total) * 100) : 0
 
               return (
-                <tr key={eng.id}>
-                  <td colSpan={7} className="p-0">
-                    {/* Main row */}
-                    <div
-                      className="flex items-center border-b border-border-subtle hover:bg-[#F0EDE6]/50 transition-colors cursor-pointer"
-                      onClick={() => setExpandedId(isExpanded ? null : eng.id)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedId(isExpanded ? null : eng.id) } }}
-                      aria-expanded={isExpanded}
-                    >
-                      <div className="w-8 flex items-center justify-center">
-                        <ChevronRight
-                          size={14}
-                          className={`text-text-tertiary transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
-                        />
-                      </div>
-                      <div className="px-4 py-3 flex-1 min-w-0">
-                        <span className="text-sm font-medium text-text-primary truncate block" title={eng.partner_name}>
-                          {eng.partner_name}
-                        </span>
-                      </div>
-                      <div className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <StatusDropdown
-                          value={eng.status}
-                          options={ENG_STATUS_OPTIONS}
-                          onChange={async (newStatus) => {
-                            await onUpdateEngagement(eng.id, { status: newStatus as Engagement['status'] })
-                          }}
-                        />
-                      </div>
-                      <div className="px-4 py-3 flex gap-1 flex-wrap">
+                <React.Fragment key={eng.id}>
+                  <tr
+                    className="border-b border-border-subtle hover:bg-[#F0EDE6]/50 transition-colors cursor-pointer"
+                    onClick={() => setExpandedId(isExpanded ? null : eng.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedId(isExpanded ? null : eng.id) } }}
+                    aria-expanded={isExpanded}
+                  >
+                    <td className="w-8 text-center">
+                      <ChevronRight
+                        size={14}
+                        className={`inline-block text-text-tertiary transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-left">
+                      <span className="text-sm font-medium text-text-primary truncate block" title={eng.partner_name}>
+                        {eng.partner_name}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-left" onClick={(e) => e.stopPropagation()}>
+                      <StatusDropdown
+                        value={eng.status}
+                        options={ENG_STATUS_OPTIONS}
+                        onChange={async (newStatus) => {
+                          await onUpdateEngagement(eng.id, { status: newStatus as Engagement['status'] })
+                        }}
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-left">
+                      <div className="flex gap-1 flex-wrap">
                         {eng.capabilities_applied.map((capId) => (
                           <Badge key={capId} variant="purple" size="sm">{capId.replace('cap-', '')}</Badge>
                         ))}
                       </div>
-                      <div className={`px-4 py-3 text-right font-mono text-sm font-semibold ${healthColor(eng.health_score)}`}>
-                        {eng.health_score}
-                      </div>
-                      <div className="px-4 py-3 w-44">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 rounded-full bg-[#E8E4D9] overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-300 ${progressBarColor(eng.health_score)}`}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-mono text-text-secondary whitespace-nowrap">
-                            {completed}/{total}
-                          </span>
+                    </td>
+                    <td className={`px-4 py-3 text-right font-mono text-sm font-semibold ${healthColor(eng.health_score)}`}>
+                      {eng.health_score}
+                    </td>
+                    <td className="px-4 py-3 w-44">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 rounded-full bg-[#E8E4D9] overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${progressBarColor(eng.health_score)}`}
+                            style={{ width: `${pct}%` }}
+                          />
                         </div>
+                        <span className="text-xs font-mono text-text-secondary whitespace-nowrap">
+                          {completed}/{total}
+                        </span>
                       </div>
-                      <div className="w-10 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                        <RowMenu onDelete={() => void onDeleteEngagement(eng.id)} />
-                      </div>
-                    </div>
+                    </td>
+                    <td className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                      <RowMenu onDelete={() => void onDeleteEngagement(eng.id)} />
+                    </td>
+                  </tr>
 
-                    {/* Expanded milestone detail */}
-                    {isExpanded && (
-                      <div className="bg-[#F0EDE6]/30 border-b border-border-subtle">
+                  {/* Expanded milestone detail */}
+                  {isExpanded && (
+                    <tr>
+                      <td colSpan={7} className="p-0 bg-[#F0EDE6]/30 border-b border-border-subtle">
                         <div className="px-4 py-4 pl-12">
                           <div className="flex items-center gap-2 mb-3">
                             <span className="text-xs uppercase tracking-wider text-text-tertiary font-medium">
@@ -378,10 +379,10 @@ export const EngagementTracker: FC<EngagementTrackerProps> = ({
                             </button>
                           )}
                         </div>
-                      </div>
-                    )}
-                  </td>
-                </tr>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               )
             })}
           </tbody>

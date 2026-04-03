@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { Check, Loader2 } from 'lucide-react'
+import { useState, useCallback, useEffect } from 'react'
+import { Check, Loader2, ChevronDown, Trash2, Eye } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { IntakeForm } from '@/components/solutions/IntakeForm'
@@ -9,7 +9,9 @@ import { CapabilityMatch } from '@/components/solutions/CapabilityMatch'
 import { SolutionSimulationView } from '@/components/solutions/SolutionSimulation'
 import { ProposalPreview } from '@/components/solutions/ProposalPreview'
 import { Button } from '@/components/ui/Button'
-import type { IntakeFormData, SolutionMatch, SolutionSimulation } from '@/types'
+import { Badge } from '@/components/ui/Badge'
+import { Card } from '@/components/ui/Card'
+import type { IntakeFormData, SolutionMatch, SolutionSimulation, SavedProposal, SavedProposalSummary } from '@/types'
 
 type Step = 1 | 2 | 3
 
@@ -27,6 +29,26 @@ const SolutionsPage = (): React.ReactElement => {
   const [simulation, setSimulation] = useState<SolutionSimulation | null>(null)
   const [apiState, setApiState] = useState<ApiState>({ status: 'idle' })
   const [slideDirection, setSlideDirection] = useState<'forward' | 'back'>('forward')
+
+  // Saved proposals
+  const [savedProposals, setSavedProposals] = useState<SavedProposalSummary[]>([])
+  const [showSaved, setShowSaved] = useState(false)
+  const [viewingProposal, setViewingProposal] = useState(false)
+
+  const fetchProposals = useCallback(async (): Promise<void> => {
+    try {
+      const res = await fetch('/api/proposals')
+      if (!res.ok) return
+      const json = await res.json() as { data: SavedProposalSummary[] }
+      setSavedProposals(json.data)
+    } catch {
+      // Silently fail — proposals panel is supplementary
+    }
+  }, [])
+
+  useEffect(() => {
+    void fetchProposals()
+  }, [fetchProposals])
 
   const handleIntakeSubmit = useCallback(async (data: IntakeFormData): Promise<void> => {
     setIntake(data)
@@ -69,11 +91,100 @@ const SolutionsPage = (): React.ReactElement => {
     setStep(2)
   }, [])
 
+  const handleViewProposal = useCallback(async (id: string): Promise<void> => {
+    try {
+      const res = await fetch(`/api/proposals/${id}`)
+      if (!res.ok) return
+      const json = await res.json() as { data: SavedProposal }
+      setIntake(json.data.intake_data)
+      setMatches(json.data.matches)
+      setSimulation(json.data.simulation)
+      setViewingProposal(true)
+      setSlideDirection('forward')
+      setStep(3)
+    } catch {
+      // Silently fail
+    }
+  }, [])
+
+  const handleDeleteProposal = useCallback(async (id: string): Promise<void> => {
+    if (!window.confirm('Delete this saved proposal?')) return
+    try {
+      await fetch(`/api/proposals/${id}`, { method: 'DELETE' })
+      await fetchProposals()
+    } catch {
+      // Silently fail
+    }
+  }, [fetchProposals])
+
+  const handleBackToNew = useCallback((): void => {
+    setViewingProposal(false)
+    setIntake(null)
+    setMatches([])
+    setSimulation(null)
+    setSlideDirection('back')
+    setStep(1)
+  }, [])
+
   return (
     <>
       <Header title="Solution Architect" subtitle="Capability matching and engagement scoping" />
       <PageContainer>
         <div className="space-y-8">
+          {/* Saved Proposals Panel */}
+          {savedProposals.length > 0 && (
+            <Card noPadding>
+              <button
+                type="button"
+                onClick={() => setShowSaved(!showSaved)}
+                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[#F0EDE6]/50 transition-colors"
+              >
+                <span className="text-sm font-medium text-text-secondary">
+                  Saved Proposals ({savedProposals.length})
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`text-text-tertiary transition-transform duration-150 ${showSaved ? 'rotate-180' : ''}`}
+                />
+              </button>
+              {showSaved && (
+                <div className="border-t border-border-subtle px-4 py-2">
+                  <div className="space-y-1">
+                    {savedProposals.map((p) => (
+                      <div key={p.id} className="group flex items-center gap-3 py-2 px-2 -mx-2 rounded hover:bg-[#F0EDE6]/50 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium text-text-primary truncate block">{p.title}</span>
+                        </div>
+                        <Badge variant="purple" size="sm">{p.match_count} capabilities</Badge>
+                        <Button size="sm" variant="ghost" onClick={() => void handleViewProposal(p.id)}>
+                          <Eye size={13} className="mr-1" /> View
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteProposal(p.id)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-text-tertiary hover:text-[#8A2020] transition-all"
+                          aria-label="Delete proposal"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* Viewing saved proposal banner */}
+          {viewingProposal && (
+            <div className="flex items-center justify-between rounded-md border border-[#D4E0ED] bg-[#D4E0ED]/30 px-4 py-2">
+              <span className="text-sm text-[#3A5A80]">Viewing saved proposal for {intake?.partnerName}</span>
+              <Button size="sm" variant="ghost" onClick={handleBackToNew}>
+                ← Back to New
+              </Button>
+            </div>
+          )}
+
           {/* Step Indicator */}
           <div className="flex items-center justify-center">
             {STEP_LABELS.map((label, i) => {
@@ -176,12 +287,19 @@ const SolutionsPage = (): React.ReactElement => {
                     <h2 className="font-display text-xl font-semibold text-text-primary">
                       Simulation & Proposal
                     </h2>
-                    <Button variant="ghost" onClick={handleBackToMatch}>
-                      &larr; Back to Matches
-                    </Button>
+                    {!viewingProposal && (
+                      <Button variant="ghost" onClick={handleBackToMatch}>
+                        &larr; Back to Matches
+                      </Button>
+                    )}
                   </div>
                   <SolutionSimulationView simulation={simulation} />
-                  <ProposalPreview intake={intake} matches={matches} simulation={simulation} />
+                  <ProposalPreview
+                    intake={intake}
+                    matches={matches}
+                    simulation={simulation}
+                    onSaved={() => void fetchProposals()}
+                  />
                 </div>
               )}
             </div>

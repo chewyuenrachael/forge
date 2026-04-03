@@ -158,7 +158,7 @@ const NarrativesPage = (): React.JSX.Element => {
 
   return (
     <>
-      <Header title="Narrative Engine" subtitle="Discourse monitoring \u2192 Content planning \u2192 Audience-specific framing" />
+      <Header title="Narrative Engine" subtitle="Discourse monitoring → Content planning → Audience-specific framing" />
       <PageContainer>
         <div className="space-y-6">
           <div className="grid grid-cols-5 gap-6">

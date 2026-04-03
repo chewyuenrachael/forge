@@ -150,6 +150,16 @@ function initializeSchema(db: Database.Database): void {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS proposals (
+      id TEXT PRIMARY KEY,
+      partner_name TEXT NOT NULL,
+      intake_data TEXT NOT NULL,
+      matches TEXT NOT NULL,
+      simulation TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      title TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS content_calendar (
       id TEXT PRIMARY KEY,
       date TEXT NOT NULL,
