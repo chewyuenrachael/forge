@@ -60,18 +60,64 @@ export interface Signal {
 export interface Engagement {
   id: string
   partner_name: string
-  status: 'active' | 'completed' | 'proposed'
+  status: 'active' | 'completed' | 'proposed' | 'paused'
   capabilities_applied: string[]
   start_date: string
+  end_date: string | null
   health_score: number
+  notes: string | null
+  created_at: string
+  updated_at: string
   milestones: Milestone[]
 }
 
 export interface Milestone {
   id: string
+  engagement_id: string
   title: string
-  status: 'completed' | 'in_progress' | 'upcoming'
+  status: 'completed' | 'in_progress' | 'upcoming' | 'blocked'
   due_date: string
+  completed_date: string | null
+  notes: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateEngagementInput {
+  partner_name: string
+  status: 'active' | 'completed' | 'proposed' | 'paused'
+  capabilities_applied: string[]
+  start_date: string
+  end_date?: string
+  notes?: string
+}
+
+export interface UpdateEngagementInput {
+  partner_name?: string
+  status?: 'active' | 'completed' | 'proposed' | 'paused'
+  capabilities_applied?: string[]
+  start_date?: string
+  end_date?: string | null
+  health_score?: number
+  notes?: string | null
+}
+
+export interface CreateMilestoneInput {
+  engagement_id: string
+  title: string
+  status: 'completed' | 'in_progress' | 'upcoming' | 'blocked'
+  due_date: string
+  notes?: string
+}
+
+export interface UpdateMilestoneInput {
+  title?: string
+  status?: 'completed' | 'in_progress' | 'upcoming' | 'blocked'
+  due_date?: string
+  completed_date?: string | null
+  notes?: string | null
+  sort_order?: number
 }
 
 // ─── ROI Calculator Types ────────────────────────────────────────────

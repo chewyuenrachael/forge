@@ -1,81 +1,201 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Activity, Heart, BookOpen, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Activity, Heart, BookOpen } from 'lucide-react'
 
 import { Header } from '@/components/layout/Header'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { MetricCard } from '@/components/ui/MetricCard'
 import { Card } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { EngagementTracker } from '@/components/delivery/EngagementTracker'
+import { NewEngagementModal } from '@/components/delivery/NewEngagementModal'
 
-import type { Engagement, Milestone, AsyncState } from '@/types'
+import type {
+  Engagement,
+  CreateEngagementInput,
+  UpdateEngagementInput,
+  UpdateMilestoneInput,
+  CreateMilestoneInput,
+} from '@/types'
 
-type BadgeVariant = 'amber' | 'blue' | 'green' | 'red' | 'purple' | 'gray'
+const CAPABILITY_IDS = [
+  'cap-rlfr',
+  'cap-reasoning-theater',
+  'cap-alzheimers',
+  'cap-rakuten-pii',
+  'cap-model-diff',
+  'cap-memorization',
+  'cap-spd',
+  'cap-evo2-tree',
+  'cap-interpreting-evo2',
+  'cap-reasoning-hood',
+]
 
-interface DeliveryData {
-  engagements: Engagement[]
-  stats: {
-    total: number
-    production: number
-    demo: number
-    research: number
-    partnerCount: number
-  }
-}
-
-function statusVariant(status: Engagement['status']): BadgeVariant {
-  switch (status) {
-    case 'active': return 'green'
-    case 'completed': return 'blue'
-    case 'proposed': return 'amber'
-  }
-}
-
-function healthColor(score: number): string {
-  if (score >= 80) return 'text-[#3D6B35]'
-  if (score >= 50) return 'text-[#8A6B20]'
-  return 'text-[#8A2020]'
-}
-
-function healthBarColor(score: number): string {
-  if (score >= 80) return 'bg-[#3D6B35]'
-  if (score >= 50) return 'bg-[#8A6B20]'
-  return 'bg-[#8A2020]'
-}
-
-function milestoneIcon(status: Milestone['status']): React.ReactNode {
-  switch (status) {
-    case 'completed': return <CheckCircle size={14} className="text-[#3D6B35]" />
-    case 'in_progress': return <Clock size={14} className="text-[#8A6B20]" />
-    case 'upcoming': return <AlertCircle size={14} className="text-text-tertiary" />
-  }
-}
-
-function milestoneVariant(status: Milestone['status']): BadgeVariant {
-  switch (status) {
-    case 'completed': return 'green'
-    case 'in_progress': return 'amber'
-    case 'upcoming': return 'gray'
-  }
+interface MilestoneRow {
+  title: string
+  due_date: string
 }
 
 const DeliveryPage = (): React.ReactElement => {
-  const [data, setData] = useState<AsyncState<DeliveryData>>({ status: 'idle' })
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [engagements, setEngagements] = useState<Engagement[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [showModal, setShowModal] = useState(false)
 
-  useEffect(() => {
-    setData({ status: 'loading' })
-    fetch('/api/knowledge')
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json() as Promise<DeliveryData>
-      })
-      .then((result) => setData({ status: 'success', data: result }))
-      .catch((err: Error) => setData({ status: 'error', error: err.message }))
+  const fetchEngagements = useCallback(async () => {
+    try {
+      const res = await fetch('/api/engagements')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json() as { data: Engagement[] }
+      setEngagements(json.data)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load engagements')
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  if (data.status === 'loading' || data.status === 'idle') {
+  useEffect(() => {
+    void fetchEngagements()
+  }, [fetchEngagements])
+
+  // ─── Mutation Handlers ──────────────────────────────────────────────
+
+  const handleCreateEngagement = useCallback(async (data: CreateEngagementInput, milestones: MilestoneRow[]) => {
+    const res = await fetch('/api/engagements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const err = await res.json() as { error: string }
+      throw new Error(err.error)
+    }
+    const json = await res.json() as { data: Engagement }
+
+    // Create initial milestones
+    for (const ms of milestones) {
+      if (ms.title.trim() && ms.due_date) {
+        await fetch(`/api/engagements/${json.data.id}/milestones`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: ms.title, status: 'upcoming', due_date: ms.due_date }),
+        })
+      }
+    }
+
+    await fetchEngagements()
+  }, [fetchEngagements])
+
+  const handleUpdateEngagement = useCallback(async (id: string, data: UpdateEngagementInput) => {
+    // Optimistic update
+    setEngagements((prev) => prev.map((eng) =>
+      eng.id === id ? { ...eng, ...data, status: data.status ?? eng.status } as Engagement : eng
+    ))
+
+    try {
+      const res = await fetch(`/api/engagements/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to update')
+      await fetchEngagements()
+    } catch {
+      await fetchEngagements() // Revert by re-fetching
+    }
+  }, [fetchEngagements])
+
+  const handleDeleteEngagement = useCallback(async (id: string) => {
+    const eng = engagements.find((e) => e.id === id)
+    const message = eng?.status === 'active'
+      ? 'This engagement is currently active. Delete anyway?'
+      : 'Delete this engagement and all its milestones?'
+    if (!window.confirm(message)) return
+
+    setEngagements((prev) => prev.filter((e) => e.id !== id))
+
+    try {
+      const res = await fetch(`/api/engagements/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
+    } catch {
+      await fetchEngagements()
+    }
+  }, [engagements, fetchEngagements])
+
+  const handleCreateMilestone = useCallback(async (
+    engagementId: string,
+    data: Omit<CreateMilestoneInput, 'engagement_id'>
+  ) => {
+    const res = await fetch(`/api/engagements/${engagementId}/milestones`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) throw new Error('Failed to create milestone')
+    await fetchEngagements()
+  }, [fetchEngagements])
+
+  const handleUpdateMilestone = useCallback(async (id: string, data: UpdateMilestoneInput) => {
+    // Optimistic update
+    setEngagements((prev) => prev.map((eng) => ({
+      ...eng,
+      milestones: eng.milestones.map((ms) => {
+        if (ms.id !== id) return ms
+        const updated = { ...ms, ...data } as Engagement['milestones'][number]
+        // Auto-set completed_date for optimistic UI
+        if (data.status === 'completed' && ms.status !== 'completed') {
+          updated.completed_date = new Date().toISOString().slice(0, 10)
+        } else if (data.status !== undefined && data.status !== 'completed' && ms.status === 'completed') {
+          updated.completed_date = null
+        }
+        return updated
+      }),
+    })))
+
+    try {
+      const res = await fetch(`/api/milestones/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to update milestone')
+      await fetchEngagements()
+    } catch {
+      await fetchEngagements()
+    }
+  }, [fetchEngagements])
+
+  const handleDeleteMilestone = useCallback(async (id: string) => {
+    if (!window.confirm('Delete this milestone?')) return
+
+    setEngagements((prev) => prev.map((eng) => ({
+      ...eng,
+      milestones: eng.milestones.filter((ms) => ms.id !== id),
+    })))
+
+    try {
+      const res = await fetch(`/api/milestones/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
+      await fetchEngagements()
+    } catch {
+      await fetchEngagements()
+    }
+  }, [fetchEngagements])
+
+  // ─── Computed Values ─────────────────────────────────────────────────
+
+  const activeCount = engagements.filter((e) => e.status === 'active').length
+  const avgHealth = engagements.length > 0
+    ? Math.round(engagements.reduce((sum, e) => sum + e.health_score, 0) / engagements.length)
+    : 0
+  const totalCapabilities = new Set(engagements.flatMap((e) => e.capabilities_applied)).size
+
+  // ─── Render ──────────────────────────────────────────────────────────
+
+  if (loading) {
     return (
       <>
         <Header title="Research Delivery Hub" subtitle="Engagement tracking and partner communication" />
@@ -93,27 +213,24 @@ const DeliveryPage = (): React.ReactElement => {
     )
   }
 
-  if (data.status === 'error') {
+  if (error && engagements.length === 0) {
     return (
       <>
         <Header title="Research Delivery Hub" subtitle="Engagement tracking and partner communication" />
         <PageContainer>
           <Card>
             <div className="text-center py-8">
-              <p className="text-accent-red text-sm font-medium">Failed to load delivery data</p>
-              <p className="text-text-secondary text-xs mt-1">{data.error}</p>
+              <p className="text-[#8A2020] text-sm font-medium">Failed to load delivery data</p>
+              <p className="text-text-secondary text-xs mt-1 mb-4">{error}</p>
+              <Button variant="secondary" onClick={() => { setLoading(true); void fetchEngagements() }}>
+                Retry
+              </Button>
             </div>
           </Card>
         </PageContainer>
       </>
     )
   }
-
-  const { engagements, stats } = data.data
-  const activeEngagements = engagements.filter((e) => e.status === 'active')
-  const avgHealth = engagements.length > 0
-    ? Math.round(engagements.reduce((sum, e) => sum + e.health_score, 0) / engagements.length)
-    : 0
 
   return (
     <>
@@ -123,7 +240,7 @@ const DeliveryPage = (): React.ReactElement => {
           {/* Metric Cards */}
           <div className="grid grid-cols-3 gap-4">
             <MetricCard
-              value={activeEngagements.length}
+              value={activeCount}
               label="Active Engagements"
               icon={<Activity size={18} />}
             />
@@ -134,107 +251,32 @@ const DeliveryPage = (): React.ReactElement => {
               mono
             />
             <MetricCard
-              value={stats.total}
-              label="Knowledge Entries"
+              value={totalCapabilities}
+              label="Capabilities Deployed"
               icon={<BookOpen size={18} />}
-              trend={{ direction: 'up', value: `${stats.production} production` }}
             />
           </div>
 
-          {/* Engagements Table */}
-          <Card header="Partner Engagements" noPadding>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border-default">
-                    <th className="px-4 py-3 text-xs uppercase tracking-wider text-text-secondary font-medium text-left">Partner</th>
-                    <th className="px-4 py-3 text-xs uppercase tracking-wider text-text-secondary font-medium text-left">Status</th>
-                    <th className="px-4 py-3 text-xs uppercase tracking-wider text-text-secondary font-medium text-left">Capabilities</th>
-                    <th className="px-4 py-3 text-xs uppercase tracking-wider text-text-secondary font-medium text-right">Health</th>
-                    <th className="px-4 py-3 text-xs uppercase tracking-wider text-text-secondary font-medium text-left">Progress</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {engagements.map((engagement) => {
-                    const isExpanded = expandedId === engagement.id
-                    const completedMilestones = engagement.milestones.filter((m) => m.status === 'completed').length
-                    const totalMilestones = engagement.milestones.length
-                    const progressPct = totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 0
-
-                    return (
-                      <tr key={engagement.id} className="group">
-                        <td colSpan={5} className="p-0">
-                          <button
-                            type="button"
-                            className="w-full text-left border-b border-border-subtle hover:bg-elevated transition-colors duration-150 cursor-pointer"
-                            onClick={() => setExpandedId(isExpanded ? null : engagement.id)}
-                          >
-                            <div className="flex items-center">
-                              <div className="px-4 py-3 flex-1">
-                                <span className="text-sm font-medium text-text-primary">{engagement.partner_name}</span>
-                              </div>
-                              <div className="px-4 py-3">
-                                <Badge variant={statusVariant(engagement.status)}>{engagement.status}</Badge>
-                              </div>
-                              <div className="px-4 py-3 flex gap-1 flex-wrap">
-                                {engagement.capabilities_applied.map((capId) => (
-                                  <Badge key={capId} variant="purple" size="sm">{capId.replace('cap-', '')}</Badge>
-                                ))}
-                              </div>
-                              <div className={`px-4 py-3 text-right font-mono text-sm ${healthColor(engagement.health_score)}`}>
-                                {engagement.health_score}
-                              </div>
-                              <div className="px-4 py-3 w-48">
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 h-1.5 rounded-full bg-elevated overflow-hidden">
-                                    <div
-                                      className={`h-full rounded-full transition-all duration-300 ${healthBarColor(engagement.health_score)}`}
-                                      style={{ width: `${progressPct}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-xs font-mono text-text-secondary">
-                                    {completedMilestones}/{totalMilestones}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </button>
-
-                          {/* Expanded milestone detail */}
-                          {isExpanded && (
-                            <div className="bg-base/50 border-b border-border-subtle px-8 py-4">
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2 mb-3">
-                                  <span className="text-xs uppercase tracking-wider text-text-tertiary font-medium">
-                                    Milestones
-                                  </span>
-                                  <span className="text-xs font-mono text-text-secondary">
-                                    Started {engagement.start_date}
-                                  </span>
-                                </div>
-                                {engagement.milestones.map((milestone) => (
-                                  <div key={milestone.id} className="flex items-center gap-3 py-1">
-                                    {milestoneIcon(milestone.status)}
-                                    <span className="text-sm text-text-primary flex-1">{milestone.title}</span>
-                                    <Badge variant={milestoneVariant(milestone.status)} size="sm">
-                                      {milestone.status.replace('_', ' ')}
-                                    </Badge>
-                                    <span className="font-mono text-xs text-text-secondary">{milestone.due_date}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+          {/* Engagement Tracker */}
+          <EngagementTracker
+            engagements={engagements}
+            onUpdateEngagement={handleUpdateEngagement}
+            onDeleteEngagement={handleDeleteEngagement}
+            onUpdateMilestone={handleUpdateMilestone}
+            onDeleteMilestone={handleDeleteMilestone}
+            onCreateMilestone={handleCreateMilestone}
+            onCreateEngagement={() => setShowModal(true)}
+          />
         </div>
       </PageContainer>
+
+      {/* New Engagement Modal */}
+      <NewEngagementModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSubmit={handleCreateEngagement}
+        availableCapabilities={CAPABILITY_IDS}
+      />
     </>
   )
 }

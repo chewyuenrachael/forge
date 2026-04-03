@@ -15,7 +15,55 @@ export function getDb(): Database.Database {
   return _db
 }
 
+function safeAddColumn(db: Database.Database, table: string, column: string, definition: string): void {
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+  } catch {
+    // Column already exists — safe to ignore
+  }
+}
+
 function initializeSchema(db: Database.Database): void {
+  // Check if engagements table needs migration (old schema lacks 'paused' status)
+  const tableInfo = db.prepare(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='engagements'"
+  ).get() as { sql: string } | undefined
+
+  if (tableInfo && !tableInfo.sql.includes('paused')) {
+    // Old schema — save data, recreate with updated CHECK constraint
+    const oldRows = db.prepare('SELECT * FROM engagements').all() as Record<string, unknown>[]
+    db.exec('DROP TABLE IF EXISTS engagements')
+
+    db.exec(`
+      CREATE TABLE engagements (
+        id TEXT PRIMARY KEY,
+        partner_name TEXT NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('active','completed','proposed','paused')),
+        capabilities_applied TEXT NOT NULL DEFAULT '[]',
+        start_date TEXT NOT NULL,
+        end_date TEXT,
+        health_score INTEGER NOT NULL DEFAULT 75 CHECK(health_score >= 0 AND health_score <= 100),
+        notes TEXT,
+        milestones TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `)
+
+    // Re-insert old data
+    const insert = db.prepare(
+      `INSERT INTO engagements (id, partner_name, status, capabilities_applied, start_date, health_score, milestones)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    for (const row of oldRows) {
+      insert.run(
+        row['id'], row['partner_name'], row['status'],
+        row['capabilities_applied'], row['start_date'],
+        row['health_score'], row['milestones']
+      )
+    }
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS capabilities (
       id TEXT PRIMARY KEY,
@@ -78,11 +126,28 @@ function initializeSchema(db: Database.Database): void {
     CREATE TABLE IF NOT EXISTS engagements (
       id TEXT PRIMARY KEY,
       partner_name TEXT NOT NULL,
-      status TEXT NOT NULL CHECK(status IN ('active', 'completed', 'proposed')),
+      status TEXT NOT NULL CHECK(status IN ('active','completed','proposed','paused')),
       capabilities_applied TEXT NOT NULL DEFAULT '[]',
       start_date TEXT NOT NULL,
-      health_score REAL NOT NULL,
-      milestones TEXT NOT NULL DEFAULT '[]'
+      end_date TEXT,
+      health_score INTEGER NOT NULL DEFAULT 75 CHECK(health_score >= 0 AND health_score <= 100),
+      notes TEXT,
+      milestones TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS milestones (
+      id TEXT PRIMARY KEY,
+      engagement_id TEXT NOT NULL REFERENCES engagements(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('completed','in_progress','upcoming','blocked')),
+      due_date TEXT NOT NULL,
+      completed_date TEXT,
+      notes TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS content_calendar (
@@ -99,8 +164,47 @@ function initializeSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_signals_type ON signals(type);
     CREATE INDEX IF NOT EXISTS idx_signals_relevance_score ON signals(relevance_score);
     CREATE INDEX IF NOT EXISTS idx_engagements_status ON engagements(status);
+    CREATE INDEX IF NOT EXISTS idx_milestones_engagement ON milestones(engagement_id);
+    CREATE INDEX IF NOT EXISTS idx_milestones_status ON milestones(status);
     CREATE INDEX IF NOT EXISTS idx_content_calendar_date ON content_calendar(date);
   `)
+
+  // Add columns that may be missing on existing databases
+  safeAddColumn(db, 'engagements', 'end_date', 'TEXT')
+  safeAddColumn(db, 'engagements', 'notes', 'TEXT')
+  safeAddColumn(db, 'engagements', 'created_at', "TEXT NOT NULL DEFAULT (datetime('now'))")
+  safeAddColumn(db, 'engagements', 'updated_at', "TEXT NOT NULL DEFAULT (datetime('now'))")
+
+  // Migrate JSON milestones to milestones table if needed
+  migrateJsonMilestones(db)
+}
+
+function migrateJsonMilestones(db: Database.Database): void {
+  const msCount = (db.prepare('SELECT COUNT(*) as count FROM milestones').get() as { count: number }).count
+  if (msCount > 0) return // Already migrated
+
+  const rows = db.prepare("SELECT id, milestones FROM engagements WHERE milestones != '[]'").all() as { id: string; milestones: string }[]
+  if (rows.length === 0) return
+
+  const insert = db.prepare(
+    `INSERT OR IGNORE INTO milestones (id, engagement_id, title, status, due_date, completed_date, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  )
+
+  for (const row of rows) {
+    const milestones = JSON.parse(row.milestones) as Array<{ id: string; title: string; status: string; due_date: string }>
+    milestones.forEach((ms, idx) => {
+      insert.run(
+        ms.id,
+        row.id,
+        ms.title,
+        ms.status,
+        ms.due_date,
+        ms.status === 'completed' ? ms.due_date : null,
+        idx
+      )
+    })
+  }
 }
 
 export function ensureSeeded(): void {

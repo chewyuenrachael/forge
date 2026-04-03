@@ -20,14 +20,50 @@ function parseCapability(row: Record<string, unknown>): Capability {
 }
 
 function parseEngagement(row: Record<string, unknown>): Engagement {
+  const id = row['id'] as string
+  const now = new Date().toISOString()
+  const db = getDb()
+
+  // Load milestones from milestones table (preferred) or fallback to JSON column
+  const msRows = db.prepare('SELECT * FROM milestones WHERE engagement_id = ? ORDER BY sort_order ASC').all(id) as Array<Record<string, unknown>>
+  const milestones: Milestone[] = msRows.length > 0
+    ? msRows.map((m) => ({
+        id: m['id'] as string,
+        engagement_id: m['engagement_id'] as string,
+        title: m['title'] as string,
+        status: m['status'] as Milestone['status'],
+        due_date: m['due_date'] as string,
+        completed_date: (m['completed_date'] as string) ?? null,
+        notes: (m['notes'] as string) ?? null,
+        sort_order: (m['sort_order'] as number) ?? 0,
+        created_at: (m['created_at'] as string) ?? now,
+        updated_at: (m['updated_at'] as string) ?? now,
+      }))
+    : (JSON.parse(row['milestones'] as string) as Array<Record<string, unknown>>).map((m, idx) => ({
+        id: m['id'] as string,
+        engagement_id: id,
+        title: m['title'] as string,
+        status: m['status'] as Milestone['status'],
+        due_date: m['due_date'] as string,
+        completed_date: m['status'] === 'completed' ? (m['due_date'] as string) : null,
+        notes: null,
+        sort_order: idx,
+        created_at: now,
+        updated_at: now,
+      }))
+
   return {
-    id: row['id'] as string,
+    id,
     partner_name: row['partner_name'] as string,
     status: row['status'] as Engagement['status'],
     capabilities_applied: JSON.parse(row['capabilities_applied'] as string) as string[],
     start_date: row['start_date'] as string,
+    end_date: (row['end_date'] as string) ?? null,
     health_score: row['health_score'] as number,
-    milestones: JSON.parse(row['milestones'] as string) as Milestone[],
+    notes: (row['notes'] as string) ?? null,
+    created_at: (row['created_at'] as string) ?? now,
+    updated_at: (row['updated_at'] as string) ?? now,
+    milestones,
   }
 }
 
