@@ -1,21 +1,73 @@
-import { type FC } from 'react'
+import { type FC, type ReactNode } from 'react'
+import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
 
-interface MetricCardProps {
+interface MetricCardTrend {
+  direction?: 'up' | 'down' | 'neutral'
+  positive?: boolean
   value: string
-  label: string
-  trend?: { value: string; positive: boolean }
 }
 
-export const MetricCard: FC<MetricCardProps> = ({ value, label, trend }) => {
+interface MetricCardProps {
+  value: string | number
+  label: string
+  trend?: MetricCardTrend
+  icon?: ReactNode
+  mono?: boolean
+}
+
+function resolveDirection(trend: MetricCardTrend): 'up' | 'down' | 'neutral' {
+  if (trend.direction) return trend.direction
+  if (trend.positive === true) return 'up'
+  if (trend.positive === false) return 'down'
+  return 'neutral'
+}
+
+export const MetricCard: FC<MetricCardProps> = ({ value, label, trend, icon, mono = false }) => {
   return (
-    <div className="rounded-lg border border-border-subtle bg-surface p-4">
-      <div className="font-display text-3xl font-semibold text-text-primary tracking-tight">{value}</div>
-      <div className="mt-1 text-xs uppercase tracking-wider text-text-secondary font-medium">{label}</div>
-      {trend && (
-        <div className={`mt-2 inline-flex items-center text-xs font-medium ${trend.positive ? 'text-green-400' : 'text-red-400'}`}>
-          <span className="font-mono">{trend.positive ? '+' : ''}{trend.value}</span>
+    <Card className="relative">
+      {icon && (
+        <div className="absolute top-4 right-4 text-text-tertiary">
+          {icon}
         </div>
       )}
-    </div>
+      <div className={`text-2xl font-semibold text-text-primary tracking-tight ${mono ? 'font-mono' : 'font-display'}`}>
+        {value}
+      </div>
+      <div className="mt-1 text-xs uppercase tracking-wider text-text-secondary font-medium">
+        {label}
+      </div>
+      {trend && (
+        <div className="mt-2">
+          <TrendIndicator direction={resolveDirection(trend)} value={trend.value} />
+        </div>
+      )}
+    </Card>
+  )
+}
+
+interface TrendIndicatorProps {
+  direction: 'up' | 'down' | 'neutral'
+  value: string
+}
+
+const TrendIndicator: FC<TrendIndicatorProps> = ({ direction, value }) => {
+  const colorClass = direction === 'up'
+    ? 'text-green-400 bg-green-500/15'
+    : direction === 'down'
+      ? 'text-red-400 bg-red-500/15'
+      : 'text-gray-400 bg-gray-500/15'
+
+  const Icon = direction === 'up'
+    ? ArrowUpRight
+    : direction === 'down'
+      ? ArrowDownRight
+      : Minus
+
+  return (
+    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-xs font-medium font-mono ${colorClass}`}>
+      <Icon size={12} />
+      {value}
+    </span>
   )
 }
