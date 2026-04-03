@@ -120,8 +120,8 @@ const ACTIVITY_FEED: ActivityItem[] = [
 
 // Priority tiers for prospects
 const PIPELINE_TIERS = [
-  { label: 'Tier 1 (90+)', count: 2, value: 4_800_000, color: 'bg-green-400' },
-  { label: 'Tier 2 (80-89)', count: 3, value: 9_000_000, color: 'bg-amber-400' },
+  { label: 'Tier 1 (90+)', count: 2, value: 4_800_000, color: 'bg-[#3D6B35]' },
+  { label: 'Tier 2 (80-89)', count: 3, value: 9_000_000, color: 'bg-[#8A6B20]' },
   { label: 'Tier 3 (<80)', count: 1, value: 3_200_000, color: 'bg-text-tertiary' },
 ]
 
@@ -131,15 +131,15 @@ function computeDaysUntil(deadline: string): number {
 }
 
 function healthBarColor(score: number): string {
-  if (score >= 80) return 'bg-green-400'
-  if (score >= 50) return 'bg-amber-400'
-  return 'bg-red-400'
+  if (score >= 80) return 'bg-[#3D6B35]'
+  if (score >= 50) return 'bg-[#8A6B20]'
+  return 'bg-[#8A2020]'
 }
 
 function healthTextColor(score: number): string {
-  if (score >= 80) return 'text-green-400'
-  if (score >= 50) return 'text-amber-400'
-  return 'text-red-400'
+  if (score >= 80) return 'text-[#3D6B35]'
+  if (score >= 50) return 'text-[#8A6B20]'
+  return 'text-[#8A2020]'
 }
 
 const OpsPage = (): React.ReactElement => {

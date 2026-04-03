@@ -155,14 +155,14 @@ export const ROICalculator: FC<ROICalculatorProps> = ({ onCalculate }) => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 20 }}>
                 <XAxis type="number" tickFormatter={(v: number) => formatCurrency(v)}
-                  tick={{ fill: '#8888A0', fontSize: 11 }} axisLine={{ stroke: '#2A2A3A' }} />
+                  tick={{ fill: '#999990', fontSize: 11 }} axisLine={{ stroke: '#D0CCC4' }} />
                 <YAxis type="category" dataKey="name" width={80}
-                  tick={{ fill: '#8888A0', fontSize: 11 }} axisLine={{ stroke: '#2A2A3A' }} />
+                  tick={{ fill: '#999990', fontSize: 11 }} axisLine={{ stroke: '#D0CCC4' }} />
                 <Tooltip formatter={(v) => formatCurrencyFull(Number(v))}
-                  contentStyle={{ backgroundColor: '#1A1A25', border: '1px solid #2A2A3A', borderRadius: 8, color: '#E8E8F0' }} />
-                <Legend wrapperStyle={{ fontSize: 11, color: '#8888A0' }} />
-                <Bar dataKey="before" name="Before" fill="#EF4444" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="after" name="After" fill="#34D399" radius={[0, 4, 4, 0]} />
+                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #D0CCC4', borderRadius: 6, color: '#1A1A1A' }} />
+                <Legend wrapperStyle={{ fontSize: 11, color: '#666660' }} />
+                <Bar dataKey="before" name="Before" fill="#C45A3C" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="after" name="After" fill="#3D6B35" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -233,7 +233,7 @@ const SliderField: FC<SliderFieldProps> = ({ label, value, min, max, step, forma
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1.5 rounded-full appearance-none bg-elevated accent-amber-500 cursor-pointer"
+        className="w-full h-1.5 rounded-full appearance-none bg-[#E0DDD5] accent-[#C45A3C] cursor-pointer"
       />
     </div>
   )

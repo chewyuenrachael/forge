@@ -34,7 +34,7 @@ const config: Config = {
         'chart-5': 'var(--color-chart-5)',
       },
       fontFamily: {
-        display: ['var(--font-fraunces)'],
+        display: ['var(--font-source-serif)'],
         sans: ['var(--font-dm-sans)'],
         mono: ['var(--font-jetbrains-mono)'],
       },

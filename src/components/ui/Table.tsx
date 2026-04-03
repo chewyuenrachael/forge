@@ -37,7 +37,7 @@ export const Table: FC<TableProps> = ({ columns, data, onRowClick }) => {
             {columns.map((col) => (
               <th
                 key={col.key}
-                className={`px-4 py-3 text-xs uppercase tracking-wider text-text-secondary font-medium ${
+                className={`px-4 py-3 text-xs uppercase tracking-wider text-text-tertiary font-medium ${
                   col.align === 'right' ? 'text-right' : 'text-left'
                 }`}
               >
@@ -51,8 +51,8 @@ export const Table: FC<TableProps> = ({ columns, data, onRowClick }) => {
             <tr
               key={rowIndex}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
-              className={`border-b border-border-subtle transition-colors duration-150 ${
-                onRowClick ? 'cursor-pointer hover:bg-elevated' : ''
+              className={`border-b border-border-subtle transition-colors duration-200 ${
+                onRowClick ? 'cursor-pointer hover:bg-[#F5F2EC]' : ''
               }`}
             >
               {columns.map((col) => (

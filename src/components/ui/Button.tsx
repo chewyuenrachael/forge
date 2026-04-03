@@ -14,9 +14,9 @@ interface ButtonProps {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: 'bg-accent-amber text-text-inverse hover:bg-accent-amber-hover',
-  secondary: 'border border-border-default text-text-primary hover:bg-elevated',
-  ghost: 'text-text-secondary hover:text-text-primary hover:bg-elevated',
+  primary: 'bg-[#1A1A1A] text-white hover:bg-[#333330]',
+  secondary: 'border border-[#D0CCC4] text-text-primary hover:bg-[#F0EDE6]',
+  ghost: 'text-text-secondary hover:text-text-primary hover:bg-[#F0EDE6]',
 }
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -39,7 +39,7 @@ export const Button: FC<ButtonProps> = ({
       type={type}
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center justify-center rounded-md font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent-amber/40 focus:ring-offset-2 focus:ring-offset-base ${variantClasses[variant]} ${sizeClasses[size]} ${disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''} ${className}`}
+      className={`inline-flex items-center justify-center rounded-md font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#C45A3C]/30 focus:ring-offset-2 focus:ring-offset-[#FAFAF7] ${variantClasses[variant]} ${sizeClasses[size]} ${disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''} ${className}`}
     >
       {children}
     </button>

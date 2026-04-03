@@ -113,11 +113,11 @@ export const ContentCalendar: FC<ContentCalendarProps> = ({ items, selectedDate,
                 {dayItems?.slice(0, 2).map((item) => (
                   <div key={item.id} className="truncate leading-none">
                     <span className={`text-[10px] font-medium px-1 py-px rounded ${
-                      TYPE_COLOR[item.type] === 'blue' ? 'bg-blue-500/15 text-blue-400' :
-                      TYPE_COLOR[item.type] === 'amber' ? 'bg-amber-500/15 text-amber-400' :
-                      TYPE_COLOR[item.type] === 'green' ? 'bg-green-500/15 text-green-400' :
-                      TYPE_COLOR[item.type] === 'purple' ? 'bg-purple-500/15 text-purple-400' :
-                      'bg-gray-500/15 text-gray-400'
+                      TYPE_COLOR[item.type] === 'blue' ? 'bg-[#D4E0ED] text-[#3A5A80]' :
+                      TYPE_COLOR[item.type] === 'amber' ? 'bg-[#EDE0C8] text-[#8A6B20]' :
+                      TYPE_COLOR[item.type] === 'green' ? 'bg-[#D4E7D0] text-[#3D6B35]' :
+                      TYPE_COLOR[item.type] === 'purple' ? 'bg-[#E4D8ED] text-[#5A3D80]' :
+                      'bg-[#E8E4D9] text-[#5C5A50]'
                     }`}>
                       {item.title.length > 20 ? item.title.slice(0, 18) + '...' : item.title}
                     </span>

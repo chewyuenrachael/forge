@@ -139,8 +139,8 @@ const SolutionsPage = (): React.ReactElement => {
 
           {/* Error State */}
           {apiState.status === 'error' && (
-            <div className="rounded-lg border border-accent-red/30 bg-red-500/5 px-4 py-3">
-              <p className="text-sm text-accent-red">{apiState.error}</p>
+            <div className="rounded-md border border-[#8A2020]/30 bg-[#EDCFCF]/50 px-4 py-3">
+              <p className="text-sm text-[#8A2020]">{apiState.error}</p>
               <Button
                 variant="ghost"
                 className="mt-2 text-accent-red"

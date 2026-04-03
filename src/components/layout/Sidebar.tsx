@@ -9,10 +9,10 @@ export const Sidebar: FC = () => {
   const pathname = usePathname()
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-base border-r border-border-subtle flex flex-col z-40">
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-surface border-r border-border-subtle flex flex-col z-40">
       {/* Wordmark */}
       <div className="px-6 py-5">
-        <span className="font-display text-lg font-semibold text-accent-amber tracking-widest">
+        <span className="font-display text-lg font-semibold text-text-primary tracking-widest">
           FORGE
         </span>
         <div className="text-xs text-text-tertiary mt-0.5">for Goodfire</div>
@@ -27,10 +27,10 @@ export const Sidebar: FC = () => {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent-amber/40 focus:ring-offset-2 focus:ring-offset-base ${
+              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#C45A3C]/30 focus:ring-offset-2 focus:ring-offset-surface ${
                 isActive
-                  ? 'border-l-[3px] border-accent-amber bg-elevated text-text-primary pl-[21px] pr-3'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-elevated pl-6 pr-3'
+                  ? 'text-[#C45A3C] bg-[#C45A3C]/[0.08]'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-[#F0EDE6]'
               }`}
             >
               <Icon size={20} />

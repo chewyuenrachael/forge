@@ -168,7 +168,7 @@ export const IntakeForm: FC<IntakeFormProps> = ({ onSubmit }) => {
               placeholder="Describe the partner's situation, goals, or specific needs..."
               value={formData.additionalContext}
               onChange={(e) => setFormData((prev) => ({ ...prev, additionalContext: e.target.value }))}
-              className="w-full rounded-md border border-border-default bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-amber focus:ring-1 focus:ring-accent-amber/30 focus:outline-none transition-colors duration-150 resize-none"
+              className="w-full rounded-md border border-[#D0CCC4] bg-white px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-[#C45A3C] focus:ring-1 focus:ring-[#C45A3C]/20 focus:outline-none transition-colors duration-200 resize-none"
             />
             <span className="text-xs text-text-tertiary font-mono">{formData.additionalContext.length}/{MAX_TEXTAREA_LENGTH}</span>
           </div>
@@ -250,7 +250,7 @@ export const IntakeForm: FC<IntakeFormProps> = ({ onSubmit }) => {
                     type="checkbox"
                     checked={formData.painPoints.includes(pp)}
                     onChange={() => toggleArrayField('painPoints', pp)}
-                    className="h-4 w-4 rounded border-border-default bg-base accent-amber-500"
+                    className="h-4 w-4 rounded border-border-default bg-base accent-[#C45A3C]"
                   />
                   <span className="text-sm text-text-primary">{pp}</span>
                 </label>
@@ -271,7 +271,7 @@ export const IntakeForm: FC<IntakeFormProps> = ({ onSubmit }) => {
                     type="checkbox"
                     checked={formData.regulatoryExposure.includes(reg)}
                     onChange={() => toggleArrayField('regulatoryExposure', reg)}
-                    className="h-4 w-4 rounded border-border-default bg-base accent-amber-500"
+                    className="h-4 w-4 rounded border-border-default bg-base accent-[#C45A3C]"
                   />
                   <span className="text-sm text-text-primary">{reg}</span>
                 </label>
@@ -291,7 +291,7 @@ export const IntakeForm: FC<IntakeFormProps> = ({ onSubmit }) => {
                     type="checkbox"
                     checked={formData.teamComposition.includes(team)}
                     onChange={() => toggleArrayField('teamComposition', team)}
-                    className="h-4 w-4 rounded border-border-default bg-base accent-amber-500"
+                    className="h-4 w-4 rounded border-border-default bg-base accent-[#C45A3C]"
                   />
                   <span className="text-sm text-text-primary">{team}</span>
                 </label>

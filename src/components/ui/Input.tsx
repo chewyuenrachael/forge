@@ -44,14 +44,14 @@ export const Input: FC<InputProps> = ({
         placeholder={placeholder}
         maxLength={maxLength}
         required={required}
-        className={`h-9 w-full rounded-md border bg-base px-3 text-sm text-text-primary placeholder:text-text-tertiary transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-accent-amber/30 ${
+        className={`h-9 w-full rounded-md border bg-white px-3 text-sm text-text-primary placeholder:text-text-tertiary transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-[#C45A3C]/20 ${
           error
-            ? 'border-red-500 focus:border-red-500'
-            : 'border-border-default focus:border-accent-amber'
+            ? 'border-[#8A2020] focus:border-[#8A2020]'
+            : 'border-[#D0CCC4] focus:border-[#C45A3C]'
         }`}
       />
       {error && (
-        <p className="mt-1 text-xs text-red-400">{error}</p>
+        <p className="mt-1 text-xs text-[#8A2020]">{error}</p>
       )}
     </div>
   )

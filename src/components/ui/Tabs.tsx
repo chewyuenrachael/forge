@@ -21,9 +21,9 @@ export const Tabs: FC<TabsProps> = ({ tabs, activeTab, onChange, onTabChange }) 
         <button
           key={tab.id}
           onClick={() => handleChange?.(tab.id)}
-          className={`relative px-4 py-2 text-sm font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent-amber/40 focus:ring-offset-2 focus:ring-offset-base -mb-px border-b-2 ${
+          className={`relative px-4 py-2 text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#C45A3C]/30 focus:ring-offset-2 focus:ring-offset-[#FAFAF7] -mb-px border-b-2 ${
             activeTab === tab.id
-              ? 'border-accent-amber text-text-primary'
+              ? 'border-[#C45A3C] text-text-primary'
               : 'border-transparent text-text-secondary hover:text-text-primary'
           }`}
         >

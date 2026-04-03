@@ -40,7 +40,7 @@ export const Select: FC<SelectProps> = ({
           id={selectId}
           value={value}
           onChange={onChange}
-          className="h-9 w-full appearance-none rounded-md border border-border-default bg-base px-3 pr-9 text-sm text-text-primary transition-colors duration-150 focus:outline-none focus:border-accent-amber focus:ring-1 focus:ring-accent-amber/30"
+          className="h-9 w-full appearance-none rounded-md border border-[#D0CCC4] bg-white px-3 pr-9 text-sm text-text-primary transition-colors duration-200 focus:outline-none focus:border-[#C45A3C] focus:ring-1 focus:ring-[#C45A3C]/20"
         >
           {placeholder && (
             <option value="" disabled>

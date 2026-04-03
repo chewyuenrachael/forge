@@ -7,7 +7,7 @@ interface PageContainerProps {
 
 export const PageContainer: FC<PageContainerProps> = ({ children, className = '' }) => {
   return (
-    <div className={`max-w-[1400px] mx-auto px-8 py-6 ${className}`}>
+    <div className={`max-w-[1400px] mx-auto px-10 py-8 ${className}`}>
       {children}
     </div>
   )

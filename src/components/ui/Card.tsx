@@ -9,7 +9,7 @@ interface CardProps {
 
 export const Card: FC<CardProps> = ({ children, className = '', header, noPadding = false }) => {
   return (
-    <div className={`rounded-lg border border-border-subtle bg-surface transition-colors duration-150 hover:bg-elevated ${className}`}>
+    <div className={`rounded-md border border-border-subtle bg-surface transition-colors duration-200 ${className}`}>
       {header && (
         <div className="px-4 py-3 border-b border-border-subtle">
           {typeof header === 'string' ? (

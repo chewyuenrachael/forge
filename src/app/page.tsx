@@ -54,9 +54,9 @@ function computeDaysUntil(deadline: string): number {
 }
 
 const CHART_COLORS: Record<string, string> = {
-  Production: 'var(--color-accent-green)',
-  Demo: 'var(--color-accent-amber)',
-  Research: 'var(--color-accent-purple)',
+  Production: '#3D6B35',
+  Demo: '#8A6B20',
+  Research: '#5A3D80',
 }
 
 const OverviewPage = (): React.ReactElement => {

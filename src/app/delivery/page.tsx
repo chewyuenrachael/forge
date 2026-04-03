@@ -33,21 +33,21 @@ function statusVariant(status: Engagement['status']): BadgeVariant {
 }
 
 function healthColor(score: number): string {
-  if (score >= 80) return 'text-green-400'
-  if (score >= 50) return 'text-amber-400'
-  return 'text-red-400'
+  if (score >= 80) return 'text-[#3D6B35]'
+  if (score >= 50) return 'text-[#8A6B20]'
+  return 'text-[#8A2020]'
 }
 
 function healthBarColor(score: number): string {
-  if (score >= 80) return 'bg-green-400'
-  if (score >= 50) return 'bg-amber-400'
-  return 'bg-red-400'
+  if (score >= 80) return 'bg-[#3D6B35]'
+  if (score >= 50) return 'bg-[#8A6B20]'
+  return 'bg-[#8A2020]'
 }
 
 function milestoneIcon(status: Milestone['status']): React.ReactNode {
   switch (status) {
-    case 'completed': return <CheckCircle size={14} className="text-green-400" />
-    case 'in_progress': return <Clock size={14} className="text-amber-400" />
+    case 'completed': return <CheckCircle size={14} className="text-[#3D6B35]" />
+    case 'in_progress': return <Clock size={14} className="text-[#8A6B20]" />
     case 'upcoming': return <AlertCircle size={14} className="text-text-tertiary" />
   }
 }

@@ -46,25 +46,25 @@ export const Modal: FC<ModalProps> = ({ isOpen, onClose, title, children, size =
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
       {/* Panel */}
       <div
-        className={`relative z-10 w-full ${sizeClasses[size]} rounded-lg border border-border-default bg-surface animate-scale-in`}
+        className={`relative z-10 w-full ${sizeClasses[size]} rounded-md border border-border-subtle bg-surface animate-scale-in`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
       >
         {/* Title bar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle">
-          <h2 id="modal-title" className="text-lg font-semibold text-text-primary">
+          <h2 id="modal-title" className="font-display text-lg font-semibold text-text-primary">
             {title}
           </h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-text-tertiary hover:text-text-primary hover:bg-elevated transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent-amber/40 focus:ring-offset-2 focus:ring-offset-surface"
+            className="rounded-md p-1 text-text-tertiary hover:text-text-primary hover:bg-[#F0EDE6] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#C45A3C]/30 focus:ring-offset-2 focus:ring-offset-surface"
             aria-label="Close"
           >
             <X size={18} />

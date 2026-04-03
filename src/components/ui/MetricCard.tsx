@@ -34,7 +34,7 @@ export const MetricCard: FC<MetricCardProps> = ({ value, label, trend, icon, mon
       <div className={`text-2xl font-semibold text-text-primary tracking-tight ${mono ? 'font-mono' : 'font-display'}`}>
         {value}
       </div>
-      <div className="mt-1 text-xs uppercase tracking-wider text-text-secondary font-medium">
+      <div className="mt-1 text-xs uppercase tracking-wider text-text-tertiary font-medium">
         {label}
       </div>
       {trend && (
@@ -53,10 +53,10 @@ interface TrendIndicatorProps {
 
 const TrendIndicator: FC<TrendIndicatorProps> = ({ direction, value }) => {
   const colorClass = direction === 'up'
-    ? 'text-green-400 bg-green-500/15'
+    ? 'text-[#3D6B35] bg-[#D4E7D0]'
     : direction === 'down'
-      ? 'text-red-400 bg-red-500/15'
-      : 'text-gray-400 bg-gray-500/15'
+      ? 'text-[#8A2020] bg-[#EDCFCF]'
+      : 'text-[#5C5A50] bg-[#E8E4D9]'
 
   const Icon = direction === 'up'
     ? ArrowUpRight
@@ -65,7 +65,7 @@ const TrendIndicator: FC<TrendIndicatorProps> = ({ direction, value }) => {
       : Minus
 
   return (
-    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-xs font-medium font-mono ${colorClass}`}>
+    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm text-xs font-medium font-mono ${colorClass}`}>
       <Icon size={12} />
       {value}
     </span>
