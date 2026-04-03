@@ -1,9 +1,16 @@
-import { type FC, type ButtonHTMLAttributes } from 'react'
+import { type FC, type ReactNode, type MouseEventHandler } from 'react'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost'
+type ButtonSize = 'sm' | 'md' | 'lg'
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps {
+  children: ReactNode
   variant?: ButtonVariant
+  size?: ButtonSize
+  disabled?: boolean
+  onClick?: MouseEventHandler<HTMLButtonElement>
+  className?: string
+  type?: 'button' | 'submit'
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
@@ -12,12 +19,27 @@ const variantClasses: Record<ButtonVariant, string> = {
   ghost: 'text-text-secondary hover:text-text-primary hover:bg-elevated',
 }
 
-export const Button: FC<ButtonProps> = ({ variant = 'secondary', className = '', children, disabled, ...props }) => {
+const sizeClasses: Record<ButtonSize, string> = {
+  sm: 'h-8 px-3 text-xs',
+  md: 'h-9 px-4 text-sm',
+  lg: 'h-10 px-5 text-sm',
+}
+
+export const Button: FC<ButtonProps> = ({
+  children,
+  variant = 'secondary',
+  size = 'md',
+  disabled = false,
+  onClick,
+  className = '',
+  type = 'button',
+}) => {
   return (
     <button
-      className={`h-9 px-4 text-sm font-medium rounded-md transition-colors duration-150 focus:ring-2 focus:ring-accent-amber/40 focus:ring-offset-2 focus:ring-offset-base ${variantClasses[variant]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+      type={type}
       disabled={disabled}
-      {...props}
+      onClick={onClick}
+      className={`inline-flex items-center justify-center rounded-md font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent-amber/40 focus:ring-offset-2 focus:ring-offset-base ${variantClasses[variant]} ${sizeClasses[size]} ${disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''} ${className}`}
     >
       {children}
     </button>
