@@ -1,4 +1,5 @@
 import { Fraunces, DM_Sans, JetBrains_Mono } from 'next/font/google'
+import type { Metadata } from 'next'
 import './globals.css'
 import { Sidebar } from '@/components/layout/Sidebar'
 
@@ -23,21 +24,23 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 })
 
-export const metadata = {
-  title: 'Forge — Goodfire Commercial Intelligence',
-  description: 'Commercial intelligence operating system for Goodfire',
+export const metadata: Metadata = {
+  title: 'Forge | Goodfire Commercial Intelligence',
+  description: 'Commercial intelligence operating system for Goodfire — advancing AI interpretability',
 }
 
 // Next.js App Router requires default export for layout
 const RootLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <html lang="en" className={`${fraunces.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
-      <body className="font-sans antialiased bg-base text-text-primary">
+      <body className="font-sans antialiased bg-base text-text-primary min-h-screen">
         <div className="flex h-screen">
           <Sidebar />
-          <main className="flex-1 ml-64 overflow-auto">
-            {children}
-          </main>
+          <div className="flex-1 ml-64 flex flex-col overflow-hidden">
+            <main className="flex-1 overflow-y-auto">
+              {children}
+            </main>
+          </div>
         </div>
       </body>
     </html>
