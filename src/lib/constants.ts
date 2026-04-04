@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   Target,
+  Users,
   Cpu,
   BookOpen,
   Truck,
@@ -24,6 +25,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Overview', href: '/', icon: LayoutDashboard },
   { label: 'GTM Command Center', href: '/gtm', icon: Target },
+  { label: 'Prospect Intelligence', href: '/prospects', icon: Users },
   { label: 'Solution Architect', href: '/solutions', icon: Cpu },
   { label: 'Narrative Engine', href: '/narratives', icon: BookOpen },
   { label: 'Research Delivery', href: '/delivery', icon: Truck },
