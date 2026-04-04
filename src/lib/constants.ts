@@ -5,6 +5,7 @@ import {
   Cpu,
   BookOpen,
   Truck,
+  Layers,
   Settings,
 } from 'lucide-react'
 import type { ElementType } from 'react'
@@ -29,6 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Solution Architect', href: '/solutions', icon: Cpu },
   { label: 'Narrative Engine', href: '/narratives', icon: BookOpen },
   { label: 'Research Delivery', href: '/delivery', icon: Truck },
+  { label: 'Model Coverage', href: '/models', icon: Layers },
   { label: 'Operations', href: '/ops', icon: Settings },
 ]
 
