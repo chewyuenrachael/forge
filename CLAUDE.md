@@ -406,6 +406,116 @@ forge/
 
 ---
 
+## Data Architecture (Phase 0+)
+
+### Three-Layer Model
+
+Forge uses a three-layer data architecture. Every agent must understand which layer they're writing to and follow that layer's rules.
+
+**Layer 1 — Reference Data** (changes slowly, configured quarterly)
+Tables: `model_families`, `capabilities`, `evidence`, `audiences`, `customer_categories`, `engagement_tiers`
+Rules: Seeded on first launch. Rarely mutated by the application. Treat as read-only in most features.
+
+**Layer 2 — Operational State** (changes daily)
+Tables: `prospects`, `peer_clusters`, `signals`, `engagements`, `milestones`, `predictions`, `channel_partners`, `proposals`, `content_calendar`, `actionability_weights`
+Rules: All 10 features read from and write to this layer. Every mutation must also write to the `event_log` (Layer 3). Always update `updated_at` on modifications.
+
+**Layer 3 — Event Log** (append-only, never mutated)
+Table: `event_log`
+Rules: INSERT only. Never UPDATE or DELETE rows. Every significant action (prospect created, pipeline stage changed, prediction outcome recorded, outreach sent) writes here. This feeds analytics, the weekly brief, and the audit trail.
+
+**Design-only:** `webhooks` table exists in the schema but has no dispatch logic. Comment explains the production intent.
+
+### JSON Array Convention
+
+Many fields store arrays as JSON text in SQLite. The pattern is:
+```typescript
+// WRITING: Always use JSON.stringify()
+db.prepare('INSERT INTO x (tags) VALUES (?)').run(JSON.stringify(['tag1', 'tag2']))
+
+// READING: Always use the parseJsonArray helper from db.ts
+import { parseJsonArray } from './db'
+const tags: string[] = parseJsonArray(row.tags)
+```
+
+Fields that use this pattern: `key_results`, `model_families_tested`, `partners`, `pain_points`, `regulatory_exposure`, `model_families`, `contacts`, `outreach_history`, `matched_capability_ids`, `matched_prospect_ids`, `peer_cluster_ids`, `capabilities_applied`, `capability_ids`.
+
+### Event Logging Convention
+
+Every mutation in Layer 2 must log to the event_log. Import and use the logEvent function:
+```typescript
+import { logEvent } from './event-log'
+
+// After every create/update/delete:
+logEvent({
+  eventType: 'engagement.created',
+  entityType: 'engagement',
+  entityId: newEngagement.id,
+  payload: { partnerName: newEngagement.partner_name, tier: newEngagement.engagement_tier }
+})
+```
+
+Event types are defined in `src/types/index.ts` as the `EventType` union. Use the appropriate event type — don't invent new ones.
+
+### Model Family Foreign Keys
+
+Every entity that relates to a specific model must carry a `model_family_id` referencing the `model_families` table. This is what makes the Model Family Coverage Dashboard possible without a separate data pipeline. Entities with this FK: `engagements`, `predictions`, `prospects` (as a JSON array of IDs in `model_families` field).
+
+### Query Function Pattern
+
+All database query functions live in `src/lib/` files. Every exported function must:
+1. Have an explicit TypeScript return type
+2. Use parameterized queries only (never string interpolation into SQL)
+3. Parse JSON array fields before returning (never return raw JSON strings to callers)
+4. Handle null/empty results gracefully (return `[]` for lists, `null` for single lookups)
+5. Import `db` from `'./db'` (singleton)
+
+### New Lib Files (Phase 0)
+
+| File | Purpose |
+|---|---|
+| `src/lib/db.ts` | SQLite connection, all table creation, helpers (parseJsonArray, toJsonString) |
+| `src/lib/constants.ts` | All enums, pricing grids, SAE costs, weights, deadlines |
+| `src/lib/knowledge-graph.ts` | Capability, evidence, model family, content calendar queries |
+| `src/lib/engagements.ts` | Engagement + milestone CRUD, health score calculation |
+| `src/lib/proposals.ts` | Saved proposal CRUD |
+| `src/lib/event-log.ts` | Append-only event log writes and reads |
+| `src/lib/signals-scoring.ts` | Signal CRUD, actionability scoring engine, decay, weight management |
+| `src/lib/predictions.ts` | Prediction CRUD, outcome recording, accuracy calculation |
+| `src/lib/feedback.ts` | Signal feedback stats, conversion metrics, system health |
+| `src/lib/pricing.ts` | Engagement tier classification, margin analysis, breakeven |
+| `src/lib/channels.ts` | Channel partner CRUD and metrics |
+| `src/lib/icp-scoring.ts` | 4-filter ICP composite scoring, prospect ranking |
+| `src/lib/pipeline.ts` | Pipeline stage tracking, overview, weekly movement |
+| `src/lib/exports.ts` | CSV/JSON export, currency/date/percentage formatting |
+
+### Seed Data
+
+`src/data/seed.ts` exports a `seedDatabase(db)` function. It populates ALL tables with real Goodfire research data. The `ensureSeeded()` function in `db.ts` checks if the `capabilities` table has rows and runs the seed if empty. API routes should call `ensureSeeded()` before querying.
+
+### Role Annotations
+
+Each table has a comment documenting which roles can read/write. Four roles exist: `gtm_lead`, `applied_ai_lead`, `researcher`, `leadership`. The demo does not implement access control, but the schema is designed for it. Do not mix sensitive data (margins, cost-to-deliver) into tables that non-leadership roles would access in production. ### Feature Roadmap (Phases 1-4)
+
+All features read from and write to the three-layer data architecture above. When building any feature, be aware of what other features will consume the same data.
+
+| # | Feature | Phase | Primary page | Key data it uses |
+|---|---|---|---|---|
+| F1 | Prospect Intelligence | 1 | `/prospects` (new) | prospects, peer_clusters, icp-scoring.ts |
+| F2 | AI-Powered Outreach | 3 | `/prospects` | prospects, signals, audiences, outreach_history |
+| F3 | Pricing Engine | 1 | `/solutions` (Step 3) | engagement_tiers, model_families, pricing.ts |
+| F4 | Peer Cluster Dinner Planner | 3 | `/prospects` | peer_clusters, prospects, content_calendar |
+| F5 | Partner Health Alerts | 3 | `/delivery` | engagements, milestones, health scores |
+| F6 | TAM / ICP Dashboard | 2 | `/ops` | customer_categories, prospects, pipeline.ts |
+| F7 | Prediction Reports | 1 | `/delivery` | predictions, engagements, predictions.ts |
+| F8 | Assessment Scoping Briefing | 2 | `/solutions` | prospects, pricing.ts, signals, audiences |
+| F9 | Channel Partnership Tracker | 3 | `/ops` or new page | channel_partners, channels.ts |
+| F10 | Model Family Coverage | 2 | `/ops` | model_families, engagements, prospects, pipeline.ts |
+
+**Convention:** Features in later phases consume data written by earlier phases. If you are building a Phase 1 feature, ensure the data you write matches the types in `src/types/index.ts` exactly — Phase 2-4 features will read it without modification.
+
+---
+
 ## Code Style
 
 ### Naming Conventions
