@@ -20,7 +20,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 
 import { EU_AI_ACT_DEADLINE } from '@/lib/constants'
-import type { Capability, Prospect, ICPScore, AsyncState } from '@/types'
+import type { Capability, Prospect, ICPScore, AsyncState, ModelFamily } from '@/types'
 import type { PredictionAccuracyReport } from '@/lib/predictions'
 
 interface DashboardData {
@@ -87,6 +87,8 @@ const OverviewPage = (): React.ReactElement => {
   const [dashboard, setDashboard] = useState<AsyncState<DashboardData>>({ status: 'idle' })
   const [topProspects, setTopProspects] = useState<ProspectWithScore[]>([])
   const [accuracy, setAccuracy] = useState<PredictionAccuracyReport | null>(null)
+  const [modelFamilies, setModelFamilies] = useState<ModelFamily[]>([])
+
 
   useEffect(() => {
     setDashboard({ status: 'loading' })
@@ -98,7 +100,7 @@ const OverviewPage = (): React.ReactElement => {
       .then((data) => setDashboard({ status: 'success', data }))
       .catch((err: Error) => setDashboard({ status: 'error', error: err.message }))
 
-    fetch('/api/prospects?top=5')
+    fetch('/api/prospects?top=3')
       .then((res) => res.ok ? res.json() as Promise<{ data: ProspectWithScore[] }> : null)
       .then((result) => { if (result) setTopProspects(result.data) })
       .catch(() => { /* non-critical — overview still works */ })
@@ -106,6 +108,11 @@ const OverviewPage = (): React.ReactElement => {
     fetch('/api/predictions?accuracy=true')
       .then((res) => res.ok ? res.json() as Promise<{ data: PredictionAccuracyReport }> : null)
       .then((result) => { if (result) setAccuracy(result.data) })
+      .catch(() => { /* non-critical */ })
+
+    fetch('/api/model-families')
+      .then((res) => res.ok ? res.json() as Promise<{ data: ModelFamily[] }> : null)
+      .then((result) => { if (result) setModelFamilies(result.data) })
       .catch(() => { /* non-critical */ })
   }, [])
 
@@ -393,6 +400,43 @@ const OverviewPage = (): React.ReactElement => {
               )}
             </Card>
           </div>
+
+          {/* Section 5: Model Coverage Summary */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-text-primary">Model Coverage</h2>
+              <Link
+                href="/models"
+                className="flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary transition-colors duration-200"
+              >
+                View all <ArrowRight size={14} />
+              </Link>
+            </div>
+            {modelFamilies.length > 0 ? (
+              <div className="grid grid-cols-3 gap-6">
+                <div>
+                  <p className="font-mono text-2xl font-semibold text-[#3D6B35]">
+                    {modelFamilies.filter((mf) => mf.tier === 'tier_a').length}
+                  </p>
+                  <p className="text-xs text-text-secondary mt-0.5">Tier A &mdash; SAE Ready</p>
+                </div>
+                <div>
+                  <p className="font-mono text-2xl font-semibold text-[#8A6B20]">
+                    {modelFamilies.filter((mf) => mf.tier === 'tier_b').length}
+                  </p>
+                  <p className="text-xs text-text-secondary mt-0.5">Tier B &mdash; Planned</p>
+                </div>
+                <div>
+                  <p className="font-mono text-2xl font-semibold text-text-tertiary">
+                    {modelFamilies.filter((mf) => mf.tier === 'tier_c').length}
+                  </p>
+                  <p className="text-xs text-text-secondary mt-0.5">Tier C &mdash; Custom</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-text-tertiary italic py-4 text-center">No model family data</p>
+            )}
+          </Card>
         </div>
       </PageContainer>
     </>

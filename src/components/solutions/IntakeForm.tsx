@@ -10,6 +10,7 @@ import type { IntakeFormData } from '@/types'
 
 interface IntakeFormProps {
   onSubmit: (data: IntakeFormData) => void
+  initialData?: Partial<IntakeFormData>
 }
 
 const MODEL_FAMILY_OPTIONS = [
@@ -69,17 +70,17 @@ const TEAM_OPTIONS = [
 
 type FormErrors = Partial<Record<keyof IntakeFormData, string>>
 
-export const IntakeForm: FC<IntakeFormProps> = ({ onSubmit }) => {
+export const IntakeForm: FC<IntakeFormProps> = ({ onSubmit, initialData }) => {
   const [formData, setFormData] = useState<IntakeFormData>({
-    partnerName: '',
-    modelFamily: '',
-    modelSize: '',
-    deploymentContext: '',
-    painPoints: [],
-    regulatoryExposure: [],
-    teamComposition: [],
-    scale: '',
-    additionalContext: '',
+    partnerName: initialData?.partnerName ?? '',
+    modelFamily: initialData?.modelFamily ?? '',
+    modelSize: initialData?.modelSize ?? '',
+    deploymentContext: initialData?.deploymentContext ?? '',
+    painPoints: initialData?.painPoints ?? [],
+    regulatoryExposure: initialData?.regulatoryExposure ?? [],
+    teamComposition: initialData?.teamComposition ?? [],
+    scale: initialData?.scale ?? '',
+    additionalContext: initialData?.additionalContext ?? '',
   })
   const [errors, setErrors] = useState<FormErrors>({})
 

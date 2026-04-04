@@ -134,7 +134,7 @@ export const WeeklyPriorityList: FC<WeeklyPriorityListProps> = ({ prospects, sig
                   <span className="text-text-primary">{action}</span>
                 </div>
                 <Link
-                  href="/prospects"
+                  href={`/prospects?selected=${prospect.id}`}
                   className="text-xs text-[#C45A3C] hover:underline"
                 >
                   View Prospect <ArrowRight size={10} className="inline" />

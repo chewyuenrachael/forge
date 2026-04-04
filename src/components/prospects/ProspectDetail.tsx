@@ -1,14 +1,16 @@
 'use client'
 
 import { type FC, type ChangeEvent, useState, useCallback } from 'react'
-import { X, ExternalLink, Loader2, Trash2, Plus, Save } from 'lucide-react'
+import Link from 'next/link'
+import { X, ExternalLink, Loader2, Trash2, Plus, Save, FileText, ArrowLeft, Wrench as ScopeIcon } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { ICPScoreBreakdown } from '@/components/prospects/ICPScoreBreakdown'
+import { ScopingBriefing } from '@/components/prospects/ScopingBriefing'
 import { PIPELINE_STAGES, MAX_TEXTAREA_LENGTH } from '@/lib/constants'
-import type { Prospect, ICPScore, ProspectContact, OutreachRecord, ModelFamily } from '@/types'
+import type { Prospect, ICPScore, ProspectContact, OutreachRecord, ModelFamily, Capability, Signal, CustomerCategoryDef, ClassifyResult } from '@/types'
 
 interface ProspectDetailProps {
   prospect: Prospect & { icpScore: ICPScore }
@@ -90,6 +92,47 @@ export const ProspectDetail: FC<ProspectDetailProps> = ({
   })
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  // Briefing state
+  const [showBriefing, setShowBriefing] = useState(false)
+  const [briefingLoading, setBriefingLoading] = useState(false)
+  const [briefingData, setBriefingData] = useState<{
+    matchedCapabilities: Capability[]
+    matchedSignals: Signal[]
+    categoryDef: CustomerCategoryDef
+    tierRecommendation: ClassifyResult
+  } | null>(null)
+  const [briefingError, setBriefingError] = useState<string | null>(null)
+
+  const handlePrepareBriefing = useCallback(async (): Promise<void> => {
+    setBriefingLoading(true)
+    setBriefingError(null)
+    try {
+      const res = await fetch('/api/briefing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prospectId: prospect.id }),
+      })
+      if (!res.ok) {
+        const err = await res.json() as { error: string }
+        throw new Error(err.error)
+      }
+      const json = await res.json() as {
+        data: {
+          matchedCapabilities: Capability[]
+          matchedSignals: Signal[]
+          categoryDef: CustomerCategoryDef
+          tierRecommendation: ClassifyResult
+        }
+      }
+      setBriefingData(json.data)
+      setShowBriefing(true)
+    } catch (err) {
+      setBriefingError(err instanceof Error ? err.message : 'Failed to generate briefing')
+    } finally {
+      setBriefingLoading(false)
+    }
+  }, [prospect.id])
+
   const handleStageChange = useCallback(async (e: ChangeEvent<HTMLSelectElement>): Promise<void> => {
     setSaving(true)
     try {
@@ -132,6 +175,32 @@ export const ProspectDetail: FC<ProspectDetailProps> = ({
 
   const modelFamilyMap = new Map(modelFamilies.map((m) => [m.id, m]))
 
+  if (showBriefing && briefingData) {
+    return (
+      <div className="fixed inset-y-0 right-0 z-40 w-[480px] bg-surface border-l border-border-subtle shadow-lg overflow-y-auto">
+        <div className="sticky top-0 z-10 bg-surface border-b border-border-subtle px-5 py-3">
+          <button
+            onClick={() => setShowBriefing(false)}
+            className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
+          >
+            <ArrowLeft size={14} />
+            Back to Prospect
+          </button>
+        </div>
+        <div className="px-5 py-4">
+          <ScopingBriefing
+            prospect={prospect}
+            matchedCapabilities={briefingData.matchedCapabilities}
+            matchedSignals={briefingData.matchedSignals}
+            categoryDef={briefingData.categoryDef}
+            tierRecommendation={briefingData.tierRecommendation}
+            onClose={() => setShowBriefing(false)}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="fixed inset-y-0 right-0 z-40 w-[480px] bg-surface border-l border-border-subtle shadow-lg overflow-y-auto">
       {/* Header */}
@@ -150,6 +219,30 @@ export const ProspectDetail: FC<ProspectDetailProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Action Buttons */}
+      <div className="px-5 py-3 border-b border-border-subtle flex gap-2">
+        <button
+          onClick={() => void handlePrepareBriefing()}
+          disabled={briefingLoading}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md border border-[#D0CCC4] px-3 py-2 text-xs font-medium text-text-primary hover:bg-[#F0EDE6] transition-colors disabled:opacity-50"
+        >
+          {briefingLoading ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+          {briefingLoading ? 'Generating...' : 'Prepare Briefing'}
+        </button>
+        <Link
+          href={`/solutions?prospect=${prospect.id}`}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-[#1A1A1A] px-3 py-2 text-xs font-medium text-white hover:bg-[#333330] transition-colors"
+        >
+          <ScopeIcon size={12} />
+          Scope Engagement
+        </Link>
+      </div>
+      {briefingError && (
+        <div className="mx-5 mt-2 rounded-md border border-[#8A2020]/30 bg-[#EDCFCF]/50 px-3 py-2">
+          <p className="text-xs text-[#8A2020]">{briefingError}</p>
+        </div>
+      )}
 
       <div className="px-5 py-4 space-y-5">
         {/* ICP Score */}

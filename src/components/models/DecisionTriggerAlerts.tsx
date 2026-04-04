@@ -1,7 +1,8 @@
 'use client'
 
 import { type FC } from 'react'
-import { CheckCircle, XCircle } from 'lucide-react'
+import Link from 'next/link'
+import { CheckCircle, XCircle, ArrowRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import type { ModelFamilyTier } from '@/lib/constants'
@@ -138,6 +139,11 @@ export const DecisionTriggerAlerts: FC<DecisionTriggerAlertsProps> = ({ triggers
                 'bg-elevated text-text-secondary'
               }`}>
                 {getRecommendation(trigger)}
+              </div>
+              <div className="mt-2 text-right">
+                <Link href="/ops" className="inline-flex items-center gap-1 text-xs text-[#C45A3C] hover:underline">
+                  View Pipeline <ArrowRight size={10} />
+                </Link>
               </div>
             </div>
           )

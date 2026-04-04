@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Check, Loader2, ChevronDown, Trash2, Eye } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { PageContainer } from '@/components/layout/PageContainer'
@@ -12,7 +13,7 @@ import { PricingEngine } from '@/components/solutions/PricingEngine'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
-import type { IntakeFormData, SolutionMatch, SolutionSimulation, ClassifyResult, SavedProposal, SavedProposalSummary } from '@/types'
+import type { IntakeFormData, SolutionMatch, SolutionSimulation, ClassifyResult, SavedProposal, SavedProposalSummary, Prospect, ICPScore, ModelFamily } from '@/types'
 
 type Step = 1 | 2 | 3
 
@@ -23,9 +24,41 @@ interface ApiState {
   error?: string
 }
 
-const SolutionsPage = (): React.ReactElement => {
+const PAIN_POINT_MAP: Record<string, string> = {
+  hallucination: 'Hallucination',
+  bias: 'Bias/Fairness',
+  fairness: 'Bias/Fairness',
+  safety: 'Safety/Jailbreak',
+  jailbreak: 'Safety/Jailbreak',
+  compliance: 'Compliance/Regulatory',
+  regulatory: 'Compliance/Regulatory',
+  cost: 'Inference Cost',
+  inference: 'Inference Cost',
+  scientific: 'Scientific Discovery',
+  discovery: 'Scientific Discovery',
+  reliability: 'Model Quality/Reliability',
+  quality: 'Model Quality/Reliability',
+}
+
+function mapPainPoints(painPoints: string[]): string[] {
+  const mapped = new Set<string>()
+  for (const pp of painPoints) {
+    const lower = pp.toLowerCase()
+    for (const [key, label] of Object.entries(PAIN_POINT_MAP)) {
+      if (lower.includes(key)) {
+        mapped.add(label)
+        break
+      }
+    }
+  }
+  return Array.from(mapped)
+}
+
+const SolutionsPageInner = (): React.ReactElement => {
+  const searchParams = useSearchParams()
   const [step, setStep] = useState<Step>(1)
   const [intake, setIntake] = useState<IntakeFormData | null>(null)
+  const [prefillData, setPrefillData] = useState<Partial<IntakeFormData> | null>(null)
   const [matches, setMatches] = useState<SolutionMatch[]>([])
   const [simulation, setSimulation] = useState<SolutionSimulation | null>(null)
   const [pricingResult, setPricingResult] = useState<ClassifyResult | null>(null)
@@ -51,6 +84,28 @@ const SolutionsPage = (): React.ReactElement => {
   useEffect(() => {
     void fetchProposals()
   }, [fetchProposals])
+
+  // Pre-fill from prospect query param
+  useEffect(() => {
+    const prospectId = searchParams.get('prospect')
+    if (!prospectId) return
+
+    Promise.all([
+      fetch(`/api/prospects/${prospectId}`).then((r) => r.ok ? r.json() as Promise<{ data: Prospect & { icpScore: ICPScore } }> : null),
+      fetch('/api/model-families').then((r) => r.ok ? r.json() as Promise<{ data: ModelFamily[] }> : null),
+    ]).then(([prospectResult, mfResult]) => {
+      if (!prospectResult) return
+      const p = prospectResult.data
+      const mfMap = new Map((mfResult?.data ?? []).map((m) => [m.id, m.name]))
+      const modelFamilyName = mfMap.get(p.model_families[0] ?? '') ?? ''
+      setPrefillData({
+        partnerName: p.name,
+        modelFamily: modelFamilyName,
+        painPoints: mapPainPoints(p.pain_points),
+        regulatoryExposure: p.regulatory_exposure,
+      })
+    }).catch(() => { /* non-critical */ })
+  }, [searchParams])
 
   const handleIntakeSubmit = useCallback(async (data: IntakeFormData): Promise<void> => {
     setIntake(data)
@@ -274,7 +329,7 @@ const SolutionsPage = (): React.ReactElement => {
               key={step}
             >
               {step === 1 && (
-                <IntakeForm onSubmit={handleIntakeSubmit} />
+                <IntakeForm onSubmit={handleIntakeSubmit} initialData={prefillData ?? undefined} />
               )}
               {step === 2 && intake && (
                 <CapabilityMatch
@@ -318,5 +373,11 @@ const SolutionsPage = (): React.ReactElement => {
     </>
   )
 }
+
+const SolutionsPage = (): React.ReactElement => (
+  <Suspense fallback={null}>
+    <SolutionsPageInner />
+  </Suspense>
+)
 
 export default SolutionsPage

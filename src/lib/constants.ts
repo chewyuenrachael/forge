@@ -1,10 +1,10 @@
 import {
   LayoutDashboard,
   Target,
-  Users,
-  Cpu,
+  UserSearch,
+  Wrench,
   BookOpen,
-  Truck,
+  FlaskConical,
   Layers,
   Settings,
 } from 'lucide-react'
@@ -25,11 +25,11 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Overview', href: '/', icon: LayoutDashboard },
+  { label: 'Prospect Intelligence', href: '/prospects', icon: UserSearch },
   { label: 'GTM Command Center', href: '/gtm', icon: Target },
-  { label: 'Prospect Intelligence', href: '/prospects', icon: Users },
-  { label: 'Solution Architect', href: '/solutions', icon: Cpu },
+  { label: 'Solution Architect', href: '/solutions', icon: Wrench },
   { label: 'Narrative Engine', href: '/narratives', icon: BookOpen },
-  { label: 'Research Delivery', href: '/delivery', icon: Truck },
+  { label: 'Research Delivery', href: '/delivery', icon: FlaskConical },
   { label: 'Model Coverage', href: '/models', icon: Layers },
   { label: 'Operations', href: '/ops', icon: Settings },
 ]

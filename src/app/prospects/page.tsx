@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Users, TrendingUp, Target, Layers, Plus, Download } from 'lucide-react'
 
 import { Header } from '@/components/layout/Header'
@@ -38,7 +39,9 @@ function getSortValue(p: ProspectWithScore, key: string): string | number {
   }
 }
 
-const ProspectsPage = (): React.ReactElement => {
+const ProspectsPageInner = (): React.ReactElement => {
+  const searchParams = useSearchParams()
+
   // Data state
   const [allProspects, setAllProspects] = useState<ProspectWithScore[]>([])
   const [clusters, setClusters] = useState<PeerCluster[]>([])
@@ -86,6 +89,14 @@ const ProspectsPage = (): React.ReactElement => {
   useEffect(() => {
     void fetchData()
   }, [fetchData])
+
+  // Deep-link: auto-select prospect from ?selected= query param
+  useEffect(() => {
+    const selectedParam = searchParams.get('selected')
+    if (selectedParam && allProspects.some((p) => p.id === selectedParam)) {
+      setSelectedProspectId(selectedParam)
+    }
+  }, [searchParams, allProspects])
 
   // ─── Computed Values ────────────────────────────────────────────────
 
@@ -359,5 +370,11 @@ const ProspectsPage = (): React.ReactElement => {
     </>
   )
 }
+
+const ProspectsPage = (): React.ReactElement => (
+  <Suspense fallback={null}>
+    <ProspectsPageInner />
+  </Suspense>
+)
 
 export default ProspectsPage

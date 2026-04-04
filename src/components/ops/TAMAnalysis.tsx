@@ -1,6 +1,8 @@
 'use client'
 
 import { type FC } from 'react'
+import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import type { CustomerCategoryDef } from '@/types'
 import type { CustomerCategory } from '@/lib/constants'
@@ -102,16 +104,21 @@ export const TAMAnalysis: FC<TAMAnalysisProps> = ({ categories, pipelineByCatego
         })}
       </div>
 
-      <div className="flex items-center justify-center gap-2 py-2">
-        <span className="text-xs uppercase tracking-wider text-text-secondary font-medium">
-          Total Addressable Pipeline:
-        </span>
-        <span className="font-mono text-sm font-semibold text-[#C45A3C]">
-          {formatCurrency(totalValue)}
-        </span>
-        <span className="text-xs text-text-secondary">
-          across {totalProspects} prospects in {activeCategories} categories
-        </span>
+      <div className="flex items-center justify-between py-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs uppercase tracking-wider text-text-secondary font-medium">
+            Total Addressable Pipeline:
+          </span>
+          <span className="font-mono text-sm font-semibold text-[#C45A3C]">
+            {formatCurrency(totalValue)}
+          </span>
+          <span className="text-xs text-text-secondary">
+            across {totalProspects} prospects in {activeCategories} categories
+          </span>
+        </div>
+        <Link href="/models" className="inline-flex items-center gap-1 text-xs text-[#C45A3C] hover:underline">
+          Model Coverage <ArrowRight size={10} />
+        </Link>
       </div>
     </div>
   )

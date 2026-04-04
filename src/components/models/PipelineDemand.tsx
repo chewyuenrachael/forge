@@ -1,6 +1,7 @@
 'use client'
 
 import { type FC } from 'react'
+import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import type { Prospect, Engagement } from '@/types'
@@ -83,7 +84,11 @@ export const PipelineDemand: FC<PipelineDemandProps> = ({
                 <tbody>
                   {filteredProspects.map((p) => (
                     <tr key={p.id} className="border-b border-border-subtle">
-                      <td className="px-3 py-2 text-sm text-text-primary">{p.name}</td>
+                      <td className="px-3 py-2 text-sm">
+                        <Link href={`/prospects?selected=${p.id}`} className="text-[#C45A3C] hover:underline">
+                          {p.name}
+                        </Link>
+                      </td>
                       <td className="px-3 py-2">
                         <Badge variant={STAGE_BADGE[p.pipeline_stage] ?? 'gray'} size="sm">
                           {formatStageLabel(p.pipeline_stage)}
