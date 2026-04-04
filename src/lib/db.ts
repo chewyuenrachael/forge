@@ -326,6 +326,18 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // Access: GTM Lead (read/write)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS icp_weights (
+      id TEXT PRIMARY KEY DEFAULT 'default',
+      model_family_match REAL NOT NULL DEFAULT 0.40,
+      regulatory_pressure REAL NOT NULL DEFAULT 0.25,
+      peer_cluster_density REAL NOT NULL DEFAULT 0.20,
+      recent_signals REAL NOT NULL DEFAULT 0.15,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `)
+
   // Access: All roles (read), System (append-only write)
   // NO UPDATE OR DELETE operations on this table. Append only.
   db.exec(`

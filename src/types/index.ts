@@ -416,6 +416,13 @@ export interface NarrativeOpportunity {
 
 // ─── ICP Scoring ────────────────────────────────────────────────────
 
+export interface ICPWeights {
+  modelFamilyMatch: number
+  regulatoryPressure: number
+  peerClusterDensity: number
+  recentSignals: number
+}
+
 export interface ICPScore {
   prospectId: string
   modelFamilyMatch: number
@@ -424,6 +431,31 @@ export interface ICPScore {
   recentIncidentOrCommitment: number
   composite: number
   breakdown: string
+}
+
+// ─── Pipeline Overview ─────────────────────────────────────────────
+
+export interface PipelineOverview {
+  totalProspects: number
+  totalPipelineValue: number
+  byStage: { stage: PipelineStage; count: number; totalValue: number }[]
+  byCategory: { category: CustomerCategory; count: number; totalValue: number }[]
+  byModelFamily: { modelFamilyId: string; count: number; totalValue: number }[]
+  byRevenueEngine: { engine: RevenueEngine; count: number; totalValue: number }[]
+  avgDealSize: number
+  conversionRates: { fromStage: PipelineStage; toStage: PipelineStage; rate: number }[]
+}
+
+// ─── Channel Metrics ───────────────────────────────────────────────
+
+export interface ChannelMetrics {
+  totalPartners: number
+  activePartners: number
+  totalEstimatedRevenue: number
+  totalCertifiedEngineers: number
+  totalEngagementsSources: number
+  clientPortfolioReach: number
+  byStatus: { status: string; count: number }[]
 }
 
 // ─── Pipeline Conversion ────────────────────────────────────────────

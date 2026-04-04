@@ -1,6 +1,62 @@
 import { getDb, parseJsonArray } from './db'
-import type { Prospect, ICPScore, PeerCluster, ProspectContact, OutreachRecord } from '@/types'
+import type { Prospect, ICPScore, ICPWeights, PeerCluster, ProspectContact, OutreachRecord } from '@/types'
 import type { ModelFamilyTier } from '@/lib/constants'
+
+// ─── ICP Weight Management ──────────────────────────────────────────
+
+const DEFAULT_ICP_WEIGHTS: ICPWeights = {
+  modelFamilyMatch: 0.40,
+  regulatoryPressure: 0.25,
+  peerClusterDensity: 0.20,
+  recentSignals: 0.15,
+}
+
+/**
+ * Read ICP scoring weights from the database.
+ * Falls back to defaults if no row exists.
+ */
+export function getICPWeights(): ICPWeights {
+  const db = getDb()
+  const row = db.prepare('SELECT * FROM icp_weights WHERE id = ?').get('default') as Record<string, unknown> | undefined
+  if (!row) return { ...DEFAULT_ICP_WEIGHTS }
+
+  return {
+    modelFamilyMatch: (row['model_family_match'] as number) ?? DEFAULT_ICP_WEIGHTS.modelFamilyMatch,
+    regulatoryPressure: (row['regulatory_pressure'] as number) ?? DEFAULT_ICP_WEIGHTS.regulatoryPressure,
+    peerClusterDensity: (row['peer_cluster_density'] as number) ?? DEFAULT_ICP_WEIGHTS.peerClusterDensity,
+    recentSignals: (row['recent_signals'] as number) ?? DEFAULT_ICP_WEIGHTS.recentSignals,
+  }
+}
+
+/**
+ * Update ICP scoring weights and recalculate all prospect scores.
+ * Validates that weights sum to approximately 1.0 (±0.05) and each is between 0 and 1.
+ */
+export function updateICPWeights(weights: ICPWeights): ICPWeights {
+  const sum = weights.modelFamilyMatch + weights.regulatoryPressure + weights.peerClusterDensity + weights.recentSignals
+  if (Math.abs(sum - 1.0) > 0.05) {
+    throw new Error(`Weights must sum to approximately 1.0 (got ${sum.toFixed(3)})`)
+  }
+  const values = [weights.modelFamilyMatch, weights.regulatoryPressure, weights.peerClusterDensity, weights.recentSignals]
+  for (const v of values) {
+    if (v < 0 || v > 1) throw new Error('Each weight must be between 0 and 1')
+  }
+
+  const db = getDb()
+  const existing = db.prepare('SELECT id FROM icp_weights WHERE id = ?').get('default')
+  if (existing) {
+    db.prepare(
+      "UPDATE icp_weights SET model_family_match = ?, regulatory_pressure = ?, peer_cluster_density = ?, recent_signals = ?, updated_at = datetime('now') WHERE id = ?"
+    ).run(weights.modelFamilyMatch, weights.regulatoryPressure, weights.peerClusterDensity, weights.recentSignals, 'default')
+  } else {
+    db.prepare(
+      'INSERT INTO icp_weights (id, model_family_match, regulatory_pressure, peer_cluster_density, recent_signals) VALUES (?, ?, ?, ?, ?)'
+    ).run('default', weights.modelFamilyMatch, weights.regulatoryPressure, weights.peerClusterDensity, weights.recentSignals)
+  }
+
+  recalculateAllICPScores()
+  return weights
+}
 
 // ─── Row Parsers ─────────────────────────────────────────────────────
 
@@ -134,8 +190,7 @@ function scoreRecentSignals(prospect: Prospect): number {
 
 /**
  * Calculate the 4-filter ICP composite score for a prospect.
- * Weights: modelFamilyMatch 0.40, regulatoryPressure 0.25,
- * peerClusterDensity 0.20, recentIncidentOrCommitment 0.15.
+ * Reads weights from the icp_weights table (defaults: 0.40/0.25/0.20/0.15).
  */
 export function calculateICPScore(prospect: Prospect): ICPScore {
   const modelFamilyMatch = scoreModelFamilyMatch(prospect)
@@ -143,11 +198,12 @@ export function calculateICPScore(prospect: Prospect): ICPScore {
   const peerClusterDensity = scorePeerClusterDensity(prospect)
   const recentIncidentOrCommitment = scoreRecentSignals(prospect)
 
+  const weights = getICPWeights()
   const composite = Math.round(
-    modelFamilyMatch * 0.40 +
-    regulatoryPressure * 0.25 +
-    peerClusterDensity * 0.20 +
-    recentIncidentOrCommitment * 0.15
+    modelFamilyMatch * weights.modelFamilyMatch +
+    regulatoryPressure * weights.regulatoryPressure +
+    peerClusterDensity * weights.peerClusterDensity +
+    recentIncidentOrCommitment * weights.recentSignals
   )
 
   // Build breakdown

@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPipelineOverview, getWeeklyPipelineMovement } from '@/lib/pipeline'
+import { getAllCustomerCategories } from '@/lib/knowledge-graph'
 import { ensureSeeded } from '@/lib/db'
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     ensureSeeded()
     const { searchParams } = new URL(request.url)
+
+    if (searchParams.get('categories') === 'true') {
+      const data = getAllCustomerCategories()
+      return NextResponse.json({ data })
+    }
 
     if (searchParams.get('weekly') === 'true') {
       const start = searchParams.get('start')

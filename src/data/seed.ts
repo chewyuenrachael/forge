@@ -522,6 +522,13 @@ export function seedDatabase(db: Database.Database): void {
 
     insertActionabilityWeights.run('default', 0.35, 0.30, 0.20, 0.15)
 
+    // ─── 8b. ICP Weights (1 entry) ──────────────────────────────────────
+    const insertICPWeights = db.prepare(`
+      INSERT INTO icp_weights (id, model_family_match, regulatory_pressure, peer_cluster_density, recent_signals)
+      VALUES (?, ?, ?, ?, ?)
+    `)
+    insertICPWeights.run('default', 0.40, 0.25, 0.20, 0.15)
+
     // ═══════════════════════════════════════════════════════════════════════
     // PHASE 2: Tables with foreign keys to Phase 1
     // ═══════════════════════════════════════════════════════════════════════
