@@ -2,18 +2,18 @@ import type Database from 'better-sqlite3'
 
 export function seedDatabase(db: Database.Database): void {
   const insertCapability = db.prepare(`
-    INSERT INTO capabilities (id, name, paper_title, authors, date, type, description, key_results, partner_solution, readiness, model_families, partners)
+    INSERT INTO capabilities (id, name, paper_title, authors, date, type, description, key_results, partner_solution, readiness, model_families_tested, partners)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   const insertEvidence = db.prepare(`
-    INSERT INTO evidence (id, capability_id, metric, value, context, source)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO evidence (id, capability_id, metric, value, context, source, is_headline)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `)
 
   const insertAudience = db.prepare(`
-    INSERT INTO audiences (id, type, title, pain_points, framing_emphasis, language_register)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO audiences (id, type, title, pain_points, framing_emphasis, language_register, value_prop_template)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `)
 
   const insertProspect = db.prepare(`
@@ -27,7 +27,12 @@ export function seedDatabase(db: Database.Database): void {
   `)
 
   const insertEngagement = db.prepare(`
-    INSERT INTO engagements (id, partner_name, status, capabilities_applied, start_date, health_score, milestones)
+    INSERT INTO engagements (id, partner_name, status, engagement_tier, capabilities_applied, start_date, health_score)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `)
+
+  const insertMilestone = db.prepare(`
+    INSERT INTO milestones (id, engagement_id, title, status, due_date, completed_date, sort_order)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `)
 
@@ -238,24 +243,24 @@ export function seedDatabase(db: Database.Database): void {
 
     // ─── Evidence ──────────────────────────────────────────────────────
 
-    insertEvidence.run('ev-rlfr-1', 'cap-rlfr', 'Hallucination reduction', '58%', 'Topline with best-of-32 on Gemma 12B', 'Prasad et al., Feb 2026')
-    insertEvidence.run('ev-rlfr-2', 'cap-rlfr', 'Hallucination reduction (no test-time)', '31%', 'RLFR-NI variant without test-time interventions', 'Prasad et al., Feb 2026')
-    insertEvidence.run('ev-rlfr-3', 'cap-rlfr', 'Cost efficiency vs LLM-as-judge', '90x cheaper', 'Per-intervention cost comparison', 'Prasad et al., Feb 2026')
-    insertEvidence.run('ev-rlfr-4', 'cap-rlfr', 'Domain coverage', '8 domains', 'Biography, science, medical, history, geography, citations, legal, general', 'Prasad et al., Feb 2026')
+    insertEvidence.run('ev-rlfr-1', 'cap-rlfr', 'Hallucination reduction', '58%', 'Topline with best-of-32 on Gemma 12B', 'Prasad et al., Feb 2026', 1)
+    insertEvidence.run('ev-rlfr-2', 'cap-rlfr', 'Hallucination reduction (no test-time)', '31%', 'RLFR-NI variant without test-time interventions', 'Prasad et al., Feb 2026', 0)
+    insertEvidence.run('ev-rlfr-3', 'cap-rlfr', 'Cost efficiency vs LLM-as-judge', '90x cheaper', 'Per-intervention cost comparison', 'Prasad et al., Feb 2026', 0)
+    insertEvidence.run('ev-rlfr-4', 'cap-rlfr', 'Domain coverage', '8 domains', 'Biography, science, medical, history, geography, citations, legal, general', 'Prasad et al., Feb 2026', 0)
 
-    insertEvidence.run('ev-rt-1', 'cap-reasoning-theater', 'Token savings (MMLU)', '68%', 'Early exit at 95% probe confidence', 'Boppana et al., Mar 2026')
-    insertEvidence.run('ev-rt-2', 'cap-reasoning-theater', 'Token savings (GPQA-Diamond)', '30%', 'On harder reasoning tasks', 'Boppana et al., Mar 2026')
-    insertEvidence.run('ev-rt-3', 'cap-reasoning-theater', 'Token savings (easy recall)', '80%', 'On easy recall tasks', 'Boppana et al., Mar 2026')
+    insertEvidence.run('ev-rt-1', 'cap-reasoning-theater', 'Token savings (MMLU)', '68%', 'Early exit at 95% probe confidence', 'Boppana et al., Mar 2026', 1)
+    insertEvidence.run('ev-rt-2', 'cap-reasoning-theater', 'Token savings (GPQA-Diamond)', '30%', 'On harder reasoning tasks', 'Boppana et al., Mar 2026', 0)
+    insertEvidence.run('ev-rt-3', 'cap-reasoning-theater', 'Token savings (easy recall)', '80%', 'On easy recall tasks', 'Boppana et al., Mar 2026', 0)
 
-    insertEvidence.run('ev-alz-1', 'cap-alzheimers', 'Novel biomarker discovery', 'DNA fragment length patterns', 'First scientific discovery via model reverse-engineering', 'Wang et al., Jan 2026')
-    insertEvidence.run('ev-alz-2', 'cap-alzheimers', 'Classifier generalization', 'Better than prior biomarker classes', 'On independent cohort', 'Wang et al., Jan 2026')
+    insertEvidence.run('ev-alz-1', 'cap-alzheimers', 'Novel biomarker discovery', 'DNA fragment length patterns', 'First scientific discovery via model reverse-engineering', 'Wang et al., Jan 2026', 1)
+    insertEvidence.run('ev-alz-2', 'cap-alzheimers', 'Classifier generalization', 'Better than prior biomarker classes', 'On independent cohort', 'Wang et al., Jan 2026', 0)
 
-    insertEvidence.run('ev-rak-1', 'cap-rakuten-pii', 'Production deployment scale', '44M+ users', 'Rakuten platform deployment', 'Nguyen et al., Oct 2025')
-    insertEvidence.run('ev-rak-2', 'cap-rakuten-pii', 'Inference overhead', 'Sub-millisecond', 'Real-time PII detection', 'Nguyen et al., Oct 2025')
+    insertEvidence.run('ev-rak-1', 'cap-rakuten-pii', 'Production deployment scale', '44M+ users', 'Rakuten platform deployment', 'Nguyen et al., Oct 2025', 1)
+    insertEvidence.run('ev-rak-2', 'cap-rakuten-pii', 'Inference overhead', 'Sub-millisecond', 'Real-time PII detection', 'Nguyen et al., Oct 2025', 0)
 
-    insertEvidence.run('ev-md-1', 'cap-model-diff', 'Behavior detection sensitivity', '1 in 1,000,000 samples', 'Rare undesired behavior detection', 'Aranguri & McGrath, Aug 2025')
+    insertEvidence.run('ev-md-1', 'cap-model-diff', 'Behavior detection sensitivity', '1 in 1,000,000 samples', 'Rare undesired behavior detection', 'Aranguri & McGrath, Aug 2025', 1)
 
-    insertEvidence.run('ev-mem-1', 'cap-memorization', 'Reasoning improvement', 'Improved after weight removal', 'Removing memorization weights improves reasoning', 'Merullo et al., Nov 2025')
+    insertEvidence.run('ev-mem-1', 'cap-memorization', 'Reasoning improvement', 'Improved after weight removal', 'Removing memorization weights improves reasoning', 'Merullo et al., Nov 2025', 1)
 
     // ─── Audiences ─────────────────────────────────────────────────────
 
@@ -270,7 +275,8 @@ export function seedDatabase(db: Database.Database): void {
         'PII leakage and safety guardrail gaps',
       ]),
       'Technical depth, benchmarks, integration simplicity',
-      'Technical, precise, benchmark-driven'
+      'Technical, precise, benchmark-driven',
+      'Reduce hallucinations by {{reduction_pct}} and cut inference costs by {{savings_pct}} with interpretability-driven model surgery — no retraining required.'
     )
 
     insertAudience.run(
@@ -284,7 +290,8 @@ export function seedDatabase(db: Database.Database): void {
         'Model reliability for customer-facing products',
       ]),
       'ROI, risk reduction, competitive advantage',
-      'Executive, outcome-oriented, strategic'
+      'Executive, outcome-oriented, strategic',
+      'Turn AI interpretability into measurable ROI: {{savings}} in annual savings, regulatory compliance, and production-grade model reliability.'
     )
 
     insertAudience.run(
@@ -298,7 +305,8 @@ export function seedDatabase(db: Database.Database): void {
         'Audit trail and explainability demands',
       ]),
       'Regulatory alignment, audit readiness, risk quantification',
-      'Formal, regulation-aware, risk-focused'
+      'Formal, regulation-aware, risk-focused',
+      'Meet {{regulation}} requirements with interpretability-based model transparency — audit-ready documentation and provable compliance.'
     )
 
     insertAudience.run(
@@ -312,12 +320,13 @@ export function seedDatabase(db: Database.Database): void {
         'Scientific discovery acceleration',
       ]),
       'Methodological rigor, novel insights, peer-reviewed foundations',
-      'Academic, methodologically precise, citation-heavy'
+      'Academic, methodologically precise, citation-heavy',
+      'Advance scientific discovery with interpretability: from novel biomarker classes to understanding reasoning model internals.'
     )
 
     insertAudience.run(
-      'aud-general',
-      'general',
+      'aud-ai-community',
+      'ai_community',
       'AI Community & Public',
       JSON.stringify([
         'AI safety and trustworthiness concerns',
@@ -326,7 +335,8 @@ export function seedDatabase(db: Database.Database): void {
         'Responsible AI development',
       ]),
       'Accessibility, real-world impact, safety narrative',
-      'Accessible, narrative-driven, impact-focused'
+      'Accessible, narrative-driven, impact-focused',
+      'Interpretability is moving from research to production — see how it reduces hallucinations, cuts costs, and enables scientific discovery.'
     )
 
     // ─── Prospects ─────────────────────────────────────────────────────
@@ -505,7 +515,7 @@ export function seedDatabase(db: Database.Database): void {
 
     insertSignal.run(
       'sig-hallucination-incident',
-      'competitor',
+      'incident',
       'Major Enterprise AI Deployment Halted Due to Hallucination Incident',
       'Fortune 500 company suspends customer-facing AI deployment after high-profile hallucination causes regulatory scrutiny. Industry analysts estimate $50M+ in damages.',
       'Financial Times',
@@ -529,63 +539,59 @@ export function seedDatabase(db: Database.Database): void {
       'Independent validation from leading safety lab demonstrates real-world safety applications'
     )
 
-    // ─── Engagements ───────────────────────────────────────────────────
+    // ─── Engagements + Milestones ──────────────────────────────────────
 
     insertEngagement.run(
       'eng-arc',
       'Arc Institute',
       'active',
+      'complex',
       JSON.stringify(['cap-evo2-tree', 'cap-interpreting-evo2']),
       '2025-01-15',
-      92,
-      JSON.stringify([
-        { id: 'ms-arc-1', title: 'Evo 2 interpretability analysis complete', status: 'completed', due_date: '2025-06-30' },
-        { id: 'ms-arc-2', title: 'Tree of Life paper published', status: 'completed', due_date: '2025-08-28' },
-        { id: 'ms-arc-3', title: 'Evo 3 interpretability collaboration', status: 'in_progress', due_date: '2026-06-30' },
-      ])
+      92
     )
+    insertMilestone.run('ms-arc-1', 'eng-arc', 'Evo 2 interpretability analysis complete', 'completed', '2025-06-30', '2025-06-30', 0)
+    insertMilestone.run('ms-arc-2', 'eng-arc', 'Tree of Life paper published', 'completed', '2025-08-28', '2025-08-28', 1)
+    insertMilestone.run('ms-arc-3', 'eng-arc', 'Evo 3 interpretability collaboration', 'in_progress', '2026-06-30', null, 2)
 
     insertEngagement.run(
       'eng-prima',
       'Prima Mente',
       'completed',
+      'complex',
       JSON.stringify(['cap-alzheimers']),
       '2025-06-01',
-      95,
-      JSON.stringify([
-        { id: 'ms-pm-1', title: 'Pleiades model analysis', status: 'completed', due_date: '2025-09-30' },
-        { id: 'ms-pm-2', title: 'Novel biomarker class discovery', status: 'completed', due_date: '2025-12-15' },
-        { id: 'ms-pm-3', title: 'Paper published', status: 'completed', due_date: '2026-01-28' },
-      ])
+      95
     )
+    insertMilestone.run('ms-pm-1', 'eng-prima', 'Pleiades model analysis', 'completed', '2025-09-30', '2025-09-30', 0)
+    insertMilestone.run('ms-pm-2', 'eng-prima', 'Novel biomarker class discovery', 'completed', '2025-12-15', '2025-12-15', 1)
+    insertMilestone.run('ms-pm-3', 'eng-prima', 'Paper published', 'completed', '2026-01-28', '2026-01-28', 2)
 
     insertEngagement.run(
       'eng-rakuten',
       'Rakuten',
       'active',
+      'standard',
       JSON.stringify(['cap-rakuten-pii']),
       '2025-04-01',
-      88,
-      JSON.stringify([
-        { id: 'ms-rak-1', title: 'SAE probe PII classifier deployed', status: 'completed', due_date: '2025-10-01' },
-        { id: 'ms-rak-2', title: 'Production rollout to 44M+ users', status: 'completed', due_date: '2025-10-28' },
-        { id: 'ms-rak-3', title: 'Expand to jailbreak and toxicity detection', status: 'in_progress', due_date: '2026-06-30' },
-      ])
+      88
     )
+    insertMilestone.run('ms-rak-1', 'eng-rakuten', 'SAE probe PII classifier deployed', 'completed', '2025-10-01', '2025-10-01', 0)
+    insertMilestone.run('ms-rak-2', 'eng-rakuten', 'Production rollout to 44M+ users', 'completed', '2025-10-28', '2025-10-28', 1)
+    insertMilestone.run('ms-rak-3', 'eng-rakuten', 'Expand to jailbreak and toxicity detection', 'in_progress', '2026-06-30', null, 2)
 
     insertEngagement.run(
       'eng-proposed-bank',
       'Deutsche Kredit AG',
       'proposed',
+      'complex',
       JSON.stringify(['cap-rlfr', 'cap-model-diff']),
       '2026-03-15',
-      65,
-      JSON.stringify([
-        { id: 'ms-dk-1', title: 'Technical discovery call', status: 'completed', due_date: '2026-03-20' },
-        { id: 'ms-dk-2', title: 'EU AI Act compliance assessment', status: 'upcoming', due_date: '2026-05-01' },
-        { id: 'ms-dk-3', title: 'Pilot scope definition', status: 'upcoming', due_date: '2026-06-15' },
-      ])
+      65
     )
+    insertMilestone.run('ms-dk-1', 'eng-proposed-bank', 'Technical discovery call', 'completed', '2026-03-20', '2026-03-20', 0)
+    insertMilestone.run('ms-dk-2', 'eng-proposed-bank', 'EU AI Act compliance assessment', 'upcoming', '2026-05-01', null, 1)
+    insertMilestone.run('ms-dk-3', 'eng-proposed-bank', 'Pilot scope definition', 'upcoming', '2026-06-15', null, 2)
 
     // ─── Content Calendar ──────────────────────────────────────────────
 

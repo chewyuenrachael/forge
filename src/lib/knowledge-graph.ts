@@ -1,6 +1,6 @@
 import { getDb } from '@/lib/db'
 import { MAX_SEARCH_LENGTH } from '@/lib/constants'
-import type { Capability, Engagement, Milestone, ContentCalendarItem, Evidence } from '@/types'
+import type { Capability, Engagement, Milestone, Prediction, ContentCalendarItem, Evidence } from '@/types'
 
 function parseCapability(row: Record<string, unknown>): Capability {
   return {
@@ -14,7 +14,7 @@ function parseCapability(row: Record<string, unknown>): Capability {
     key_results: JSON.parse(row['key_results'] as string) as string[],
     partner_solution: row['partner_solution'] as string,
     readiness: row['readiness'] as Capability['readiness'],
-    model_families: JSON.parse(row['model_families'] as string) as string[],
+    model_families_tested: JSON.parse(row['model_families_tested'] as string) as string[],
     partners: JSON.parse(row['partners'] as string) as string[],
   }
 }
@@ -52,18 +52,43 @@ function parseEngagement(row: Record<string, unknown>): Engagement {
         updated_at: now,
       }))
 
+  const predRows = db.prepare('SELECT * FROM predictions WHERE engagement_id = ? ORDER BY created_at ASC').all(id) as Array<Record<string, unknown>>
+  const predictions: Prediction[] = predRows.map((p) => ({
+    id: p['id'] as string,
+    engagement_id: p['engagement_id'] as string,
+    description: p['description'] as string,
+    methodology: p['methodology'] as string,
+    severity: p['severity'] as Prediction['severity'],
+    confidence: p['confidence'] as Prediction['confidence'],
+    outcome: p['outcome'] as Prediction['outcome'],
+    outcome_notes: (p['outcome_notes'] as string) ?? null,
+    outcome_date: (p['outcome_date'] as string) ?? null,
+    model_family_id: (p['model_family_id'] as string) ?? null,
+    created_at: (p['created_at'] as string) ?? now,
+    updated_at: (p['updated_at'] as string) ?? now,
+  }))
+
   return {
     id,
     partner_name: row['partner_name'] as string,
     status: row['status'] as Engagement['status'],
+    engagement_tier: (row['engagement_tier'] as Engagement['engagement_tier']) ?? 'standard',
     capabilities_applied: JSON.parse(row['capabilities_applied'] as string) as string[],
+    model_family_id: (row['model_family_id'] as string) ?? null,
     start_date: row['start_date'] as string,
     end_date: (row['end_date'] as string) ?? null,
     health_score: row['health_score'] as number,
+    pipeline_value: (row['pipeline_value'] as number) ?? 0,
+    cost_to_deliver: (row['cost_to_deliver'] as number) ?? 0,
+    margin_pct: (row['margin_pct'] as number) ?? 0,
+    revenue_engine: (row['revenue_engine'] as Engagement['revenue_engine']) ?? 'direct',
+    channel_partner_id: (row['channel_partner_id'] as string) ?? null,
+    prospect_id: (row['prospect_id'] as string) ?? null,
     notes: (row['notes'] as string) ?? null,
+    milestones,
+    predictions,
     created_at: (row['created_at'] as string) ?? now,
     updated_at: (row['updated_at'] as string) ?? now,
-    milestones,
   }
 }
 
@@ -143,10 +168,29 @@ export function getPartnerEngagements(): Engagement[] {
 
 export function getContentCalendar(): ContentCalendarItem[] {
   const db = getDb()
-  return db.prepare('SELECT * FROM content_calendar ORDER BY date ASC').all() as ContentCalendarItem[]
+  const rows = db.prepare('SELECT * FROM content_calendar ORDER BY date ASC').all() as Array<Record<string, unknown>>
+  return rows.map((row) => ({
+    id: row['id'] as string,
+    date: row['date'] as string,
+    type: row['type'] as ContentCalendarItem['type'],
+    title: row['title'] as string,
+    description: (row['description'] as string) ?? '',
+    signal_id: (row['signal_id'] as string) ?? null,
+    capability_ids: JSON.parse((row['capability_ids'] as string) ?? '[]') as string[],
+    status: (row['status'] as ContentCalendarItem['status']) ?? 'suggested',
+  }))
 }
 
 export function getEvidenceForCapability(capabilityId: string): Evidence[] {
   const db = getDb()
-  return db.prepare('SELECT * FROM evidence WHERE capability_id = ?').all(capabilityId) as Evidence[]
+  const rows = db.prepare('SELECT * FROM evidence WHERE capability_id = ?').all(capabilityId) as Array<Record<string, unknown>>
+  return rows.map((row) => ({
+    id: row['id'] as string,
+    capability_id: row['capability_id'] as string,
+    metric: row['metric'] as string,
+    value: row['value'] as string,
+    context: row['context'] as string,
+    source: row['source'] as string,
+    is_headline: Boolean(row['is_headline']),
+  }))
 }

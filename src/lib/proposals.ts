@@ -54,11 +54,13 @@ export function getProposalById(id: string): SavedProposal | null {
   return {
     id: row['id'] as string,
     partner_name: row['partner_name'] as string,
+    title: (row['title'] as string) ?? '',
     intake_data: JSON.parse(row['intake_data'] as string) as IntakeFormData,
     matches: JSON.parse(row['matches'] as string) as SolutionMatch[],
     simulation: JSON.parse(row['simulation'] as string) as SolutionSimulation,
+    engagement_tier: (row['engagement_tier'] as SavedProposal['engagement_tier']) ?? 'standard',
+    total_value: (row['total_value'] as number) ?? 0,
     created_at: row['created_at'] as string,
-    title: row['title'] as string,
   }
 }
 

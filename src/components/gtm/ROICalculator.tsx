@@ -198,12 +198,11 @@ interface ROIResultsPanelProps {
 }
 
 const ROIResultsPanel: FC<ROIResultsPanelProps> = ({ result }) => {
-  const chartData = [
-    { name: 'Hallucination', before: result.hallucinationSavings.before, after: result.hallucinationSavings.after },
-    { name: 'Inference', before: result.inferenceSavings.before, after: result.inferenceSavings.after },
-    { name: 'Annotation', before: result.annotationSavings.before, after: result.annotationSavings.after },
-    { name: 'Guardrails', before: result.guardrailSavings.before, after: result.guardrailSavings.after },
-  ]
+  const chartData = result.savings.map((s) => ({
+    name: s.category,
+    before: s.before,
+    after: s.after,
+  }))
 
   return (
     <Card className="p-8 mt-6">
@@ -246,16 +245,11 @@ const ROIResultsPanel: FC<ROIResultsPanelProps> = ({ result }) => {
             </tr>
           </thead>
           <tbody>
-            {[
-              { label: 'Hallucination Reduction', line: result.hallucinationSavings },
-              { label: 'Inference Optimization', line: result.inferenceSavings },
-              { label: 'Annotation Cost', line: result.annotationSavings },
-              { label: 'Guardrail Efficiency', line: result.guardrailSavings },
-            ].map((row) => (
-              <tr key={row.label} className="border-b border-border-subtle">
-                <td className="px-3 py-2 text-text-primary">{row.label}</td>
-                <td className="px-3 py-2 text-right font-mono text-text-primary">{formatCurrencyFull(row.line.annualSaving)}</td>
-                <td className="px-3 py-2 text-xs text-text-tertiary max-w-md">{row.line.source || '—'}</td>
+            {result.savings.map((line) => (
+              <tr key={line.category} className="border-b border-border-subtle">
+                <td className="px-3 py-2 text-text-primary">{line.category}</td>
+                <td className="px-3 py-2 text-right font-mono text-text-primary">{formatCurrencyFull(line.annualSaving)}</td>
+                <td className="px-3 py-2 text-xs text-text-tertiary max-w-md">{line.source || '—'}</td>
               </tr>
             ))}
           </tbody>

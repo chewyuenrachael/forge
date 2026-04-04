@@ -14,7 +14,7 @@ const AUDIENCE_TABS = [
   { id: 'ml_engineer', label: 'ML Engineers' },
   { id: 'cto', label: 'CTOs' },
   { id: 'compliance', label: 'Policy/Compliance' },
-  { id: 'general', label: 'AI Community & Public' },
+  { id: 'ai_community', label: 'AI Community & Public' },
 ]
 
 interface FrameContent {
@@ -53,7 +53,7 @@ const RLFR_FRAMES: FrameSet = {
       'Interpretability probes double as production monitors, enabling continuous compliance documentation',
     ],
   },
-  general: {
+  ai_community: {
     headline: 'We Cut AI Hallucinations in Half by Looking Inside the Model',
     hook: 'Instead of punishing a model for wrong answers, we found the internal features that cause hallucination and used them to guide training. Result: 58% fewer hallucinations, no capability degradation.',
     keyPoints: [
@@ -92,7 +92,7 @@ const RT_FRAMES: FrameSet = {
       'Published benchmarks on DeepSeek-R1 671B and GPT-OSS 120B (Boppana et al., Mar 2026)',
     ],
   },
-  general: {
+  ai_community: {
     headline: 'AI Reasoning Models Often Fake Their Reasoning \u2014 We Can Tell When',
     hook: 'When you ask AI to think step by step, it sometimes produces reasoning that looks impressive but does not reflect what the model believes. We built probes that detect this and save 68% of wasted computation.',
     keyPoints: [
@@ -131,7 +131,7 @@ const ALZ_FRAMES: FrameSet = {
       'Demonstrates the evidence standard regulatory bodies are beginning to require',
     ],
   },
-  general: {
+  ai_community: {
     headline: "We Found a New Alzheimer's Biomarker by Looking Inside an AI",
     hook: 'By reverse-engineering a foundation model trained on genetic data, we discovered that DNA fragment length patterns indicate Alzheimer\'s disease. The first major scientific discovery made by understanding how an AI works.',
     keyPoints: [
@@ -148,10 +148,10 @@ function getFrames(capability: Capability): FrameSet {
   if (capability.id === 'cap-alzheimers') return ALZ_FRAMES
   const r = capability.key_results[0] ?? capability.description
   return {
-    ml_engineer: { headline: `${capability.name}: Technical Overview`, hook: `${capability.description}`, keyPoints: [r, `Model families: ${capability.model_families.join(', ') || 'Multiple'}`, `${capability.authors}, ${capability.date}`] },
+    ml_engineer: { headline: `${capability.name}: Technical Overview`, hook: `${capability.description}`, keyPoints: [r, `Model families: ${capability.model_families_tested.join(', ') || 'Multiple'}`, `${capability.authors}, ${capability.date}`] },
     cto: { headline: `${capability.name}: Business Impact`, hook: `${capability.partner_solution}. Published by ${capability.authors}.`, keyPoints: [r, `Readiness: ${capability.readiness}`, `Partners: ${capability.partners.join(', ') || 'Available'}`] },
     compliance: { headline: `${capability.name}: Compliance Value`, hook: `${capability.description}`, keyPoints: [r, 'Interpretability-based approach provides auditable evidence', `${capability.authors}, ${capability.date}`] },
-    general: { headline: `${capability.name}: Making AI Understandable`, hook: `${capability.description}`, keyPoints: [r, capability.partner_solution, `Published by ${capability.authors}`] },
+    ai_community: { headline: `${capability.name}: Making AI Understandable`, hook: `${capability.description}`, keyPoints: [r, capability.partner_solution, `Published by ${capability.authors}`] },
   }
 }
 

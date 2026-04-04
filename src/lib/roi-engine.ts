@@ -10,6 +10,7 @@ export function calculateROI(input: ROIInput): ROIResult {
   const monthlyHallucinationSaving = estimatedHallucinationCost * hallucinationReductionRate
 
   const hallucinationSavings: SavingsLine = {
+    category: 'Hallucination Reduction',
     before: estimatedHallucinationCost * 12,
     after: (estimatedHallucinationCost - monthlyHallucinationSaving) * 12,
     annualSaving: monthlyHallucinationSaving * 12,
@@ -38,6 +39,7 @@ export function calculateROI(input: ROIInput): ROIResult {
   }
 
   const inferenceSavings: SavingsLine = {
+    category: 'Inference Optimization',
     before: inferenceBefore * 12,
     after: (inferenceBefore - monthlyInferenceSaving) * 12,
     annualSaving: monthlyInferenceSaving * 12,
@@ -53,6 +55,7 @@ export function calculateROI(input: ROIInput): ROIResult {
   const monthlyAnnotationSaving = input.monthlyAnnotationSpend * annotationReductionRate
 
   const annotationSavings: SavingsLine = {
+    category: 'Annotation Cost',
     before: input.monthlyAnnotationSpend * 12,
     after: (input.monthlyAnnotationSpend - monthlyAnnotationSaving) * 12,
     annualSaving: monthlyAnnotationSaving * 12,
@@ -68,6 +71,7 @@ export function calculateROI(input: ROIInput): ROIResult {
   const monthlyGuardrailSaving = input.monthlyGuardrailSpend * guardrailReductionRate
 
   const guardrailSavings: SavingsLine = {
+    category: 'Guardrail Efficiency',
     before: input.monthlyGuardrailSpend * 12,
     after: (input.monthlyGuardrailSpend - monthlyGuardrailSaving) * 12,
     annualSaving: monthlyGuardrailSaving * 12,
@@ -104,12 +108,9 @@ export function calculateROI(input: ROIInput): ROIResult {
   const complianceValue = { riskReduction, urgency }
 
   // ─── Totals ────────────────────────────────────────────────────────
-  const totalAnnualSaving =
-    hallucinationSavings.annualSaving +
-    inferenceSavings.annualSaving +
-    annotationSavings.annualSaving +
-    guardrailSavings.annualSaving
+  const savings: SavingsLine[] = [hallucinationSavings, inferenceSavings, annotationSavings, guardrailSavings]
 
+  const totalAnnualSaving = savings.reduce((sum, s) => sum + s.annualSaving, 0)
   const estimatedEngagementCost = { low: 75_000, high: 350_000 }
 
   // Conservative ROI: divide by high-end engagement cost
@@ -118,10 +119,7 @@ export function calculateROI(input: ROIInput): ROIResult {
     : 0
 
   return {
-    hallucinationSavings,
-    inferenceSavings,
-    annotationSavings,
-    guardrailSavings,
+    savings,
     complianceValue,
     totalAnnualSaving,
     estimatedEngagementCost,

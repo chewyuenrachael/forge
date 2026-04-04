@@ -280,6 +280,7 @@ function matchCapabilities(intake: IntakeFormData, capabilities: Capability[]): 
         matchLevel: match.matchLevel,
         rationale: match.rationale,
         estimatedTimeline: match.estimatedTimeline,
+        keyBenchmark: capability.key_results[0] ?? '',
       })
     }
   }
@@ -427,11 +428,19 @@ function generateSimulation(intake: IntakeFormData, matches: SolutionMatch[]): S
     teamRequirements.push('Executive sponsor for milestone sign-off')
   }
 
+  // Determine engagement tier from cost range
+  let engagementTier: 'simple' | 'standard' | 'complex' | 'critical' = 'standard'
+  if (costHigh <= 100_000) engagementTier = 'simple'
+  else if (costHigh <= 175_000) engagementTier = 'standard'
+  else if (costHigh <= 350_000) engagementTier = 'complex'
+  else engagementTier = 'critical'
+
   return {
     outcomes,
     engagementCost: { low: costLow, high: costHigh },
     timeline,
     teamRequirements,
+    engagementTier,
   }
 }
 

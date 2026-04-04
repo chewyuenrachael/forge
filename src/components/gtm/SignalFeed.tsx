@@ -20,6 +20,7 @@ const TYPE_BADGE_VARIANT: Record<Signal['type'], 'amber' | 'blue' | 'green' | 'r
   prospect: 'blue',
   conference: 'purple',
   research: 'green',
+  incident: 'red',
 }
 
 const CAPABILITY_NAMES: Record<string, string> = {
