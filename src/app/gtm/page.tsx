@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { MetricCard } from '@/components/ui/MetricCard'
+import { Card } from '@/components/ui/Card'
 import { SignalFeed } from '@/components/gtm/SignalFeed'
 import { ProspectCard } from '@/components/gtm/ProspectCard'
 import { OutreachDraft } from '@/components/gtm/OutreachDraft'
@@ -150,6 +153,24 @@ const GTMPage = (): React.JSX.Element => {
               ))}
             </div>
           </div>
+
+          {/* Cross-link to Prospect Intelligence */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-text-primary">Prospect Intelligence</h3>
+                <p className="text-sm text-text-secondary mt-1">
+                  Manage your pipeline, score prospects, and plan outreach bursts.
+                </p>
+              </div>
+              <Link
+                href="/prospects"
+                className="flex items-center gap-1.5 text-sm font-medium text-accent-amber hover:text-accent-amber-hover transition-colors duration-200"
+              >
+                View Prospects <ArrowRight size={16} />
+              </Link>
+            </div>
+          </Card>
         </div>
       </PageContainer>
     </>

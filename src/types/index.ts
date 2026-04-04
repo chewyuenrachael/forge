@@ -385,6 +385,19 @@ export interface SolutionSimulation {
   engagementTier: EngagementTier
 }
 
+// ─── Pricing Engine ────────────────────────────────────────────────
+
+export interface ClassifyResult {
+  tier: EngagementTier
+  priceRange: { low: number; high: number }
+  durationDays: number
+  rationale: string
+  costToDeliver: number
+  marginRange: { low: number; high: number }
+  saeCostIfNeeded: number
+  breakeven: { engagementsNeeded: number; note: string } | null
+}
+
 // ─── Narrative Engine ───────────────────────────────────────────────
 
 export interface AudienceFrame {

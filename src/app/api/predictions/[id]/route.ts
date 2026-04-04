@@ -3,17 +3,13 @@ import { getPredictionById, recordPredictionOutcome } from '@/lib/predictions'
 import { getDb, ensureSeeded } from '@/lib/db'
 import { logEvent } from '@/lib/event-log'
 
-interface RouteContext {
-  params: Promise<{ id: string }>
-}
-
 export async function GET(
   _request: NextRequest,
-  context: RouteContext,
+  { params }: { params: { id: string } },
 ): Promise<NextResponse> {
   try {
     ensureSeeded()
-    const { id } = await context.params
+    const { id } = params
     const prediction = getPredictionById(id)
 
     if (!prediction) {
@@ -35,11 +31,11 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  context: RouteContext,
+  { params }: { params: { id: string } },
 ): Promise<NextResponse> {
   try {
     ensureSeeded()
-    const { id } = await context.params
+    const { id } = params
     const body = await request.json() as Record<string, unknown>
     const outcome = body['outcome'] as string | undefined
 
@@ -81,11 +77,11 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  context: RouteContext,
+  { params }: { params: { id: string } },
 ): Promise<NextResponse> {
   try {
     ensureSeeded()
-    const { id } = await context.params
+    const { id } = params
     const { searchParams } = new URL(request.url)
 
     if (searchParams.get('confirm') !== 'true') {

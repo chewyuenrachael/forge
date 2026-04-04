@@ -8,10 +8,11 @@ import { IntakeForm } from '@/components/solutions/IntakeForm'
 import { CapabilityMatch } from '@/components/solutions/CapabilityMatch'
 import { SolutionSimulationView } from '@/components/solutions/SolutionSimulation'
 import { ProposalPreview } from '@/components/solutions/ProposalPreview'
+import { PricingEngine } from '@/components/solutions/PricingEngine'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
-import type { IntakeFormData, SolutionMatch, SolutionSimulation, SavedProposal, SavedProposalSummary } from '@/types'
+import type { IntakeFormData, SolutionMatch, SolutionSimulation, ClassifyResult, SavedProposal, SavedProposalSummary } from '@/types'
 
 type Step = 1 | 2 | 3
 
@@ -27,6 +28,7 @@ const SolutionsPage = (): React.ReactElement => {
   const [intake, setIntake] = useState<IntakeFormData | null>(null)
   const [matches, setMatches] = useState<SolutionMatch[]>([])
   const [simulation, setSimulation] = useState<SolutionSimulation | null>(null)
+  const [pricingResult, setPricingResult] = useState<ClassifyResult | null>(null)
   const [apiState, setApiState] = useState<ApiState>({ status: 'idle' })
   const [slideDirection, setSlideDirection] = useState<'forward' | 'back'>('forward')
 
@@ -122,6 +124,7 @@ const SolutionsPage = (): React.ReactElement => {
     setIntake(null)
     setMatches([])
     setSimulation(null)
+    setPricingResult(null)
     setSlideDirection('back')
     setStep(1)
   }, [])
@@ -294,10 +297,16 @@ const SolutionsPage = (): React.ReactElement => {
                     )}
                   </div>
                   <SolutionSimulationView simulation={simulation} />
+                  <PricingEngine
+                    intakeData={intake}
+                    matches={matches}
+                    onTierClassified={setPricingResult}
+                  />
                   <ProposalPreview
                     intake={intake}
                     matches={matches}
                     simulation={simulation}
+                    pricingResult={pricingResult}
                     onSaved={() => void fetchProposals()}
                   />
                 </div>

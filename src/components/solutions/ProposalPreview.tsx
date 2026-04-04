@@ -5,12 +5,14 @@ import { FileText, Check, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import type { IntakeFormData, SolutionMatch, SolutionSimulation } from '@/types'
+import { formatCurrency } from '@/lib/exports'
+import type { IntakeFormData, SolutionMatch, SolutionSimulation, ClassifyResult } from '@/types'
 
 interface ProposalPreviewProps {
   intake: IntakeFormData
   matches: SolutionMatch[]
   simulation: SolutionSimulation
+  pricingResult?: ClassifyResult | null
   onSaved?: () => void
 }
 
@@ -52,7 +54,14 @@ function formatDate(): string {
   return new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-export const ProposalPreview: FC<ProposalPreviewProps> = ({ intake, matches, simulation, onSaved }) => {
+const TIER_LABELS: Record<string, string> = {
+  simple: 'Simple',
+  standard: 'Standard',
+  complex: 'Complex',
+  critical: 'Critical',
+}
+
+export const ProposalPreview: FC<ProposalPreviewProps> = ({ intake, matches, simulation, pricingResult, onSaved }) => {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   const handleSave = useCallback(async (): Promise<void> => {
@@ -96,7 +105,12 @@ export const ProposalPreview: FC<ProposalPreviewProps> = ({ intake, matches, sim
             <FileText size={20} className="text-accent-amber" />
             <h2 className="font-display text-2xl font-semibold text-text-primary">Engagement Proposal</h2>
           </div>
-          <p className="text-sm text-text-secondary">Prepared for {intake.partnerName}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-text-secondary">Prepared for {intake.partnerName}</p>
+            {pricingResult && (
+              <Badge variant="amber" size="sm">{TIER_LABELS[pricingResult.tier] ?? pricingResult.tier} Tier</Badge>
+            )}
+          </div>
           <p className="text-xs font-mono text-text-tertiary mt-1">{formatDate()}</p>
         </div>
 
@@ -209,15 +223,45 @@ export const ProposalPreview: FC<ProposalPreviewProps> = ({ intake, matches, sim
             <div className="rounded-md bg-base px-4 py-3">
               <span className="block text-xs text-text-tertiary mb-1">Investment Range</span>
               <span className="font-mono text-lg text-text-primary">
-                ${simulation.engagementCost.low.toLocaleString()} &ndash; ${simulation.engagementCost.high.toLocaleString()}
+                {pricingResult
+                  ? `${formatCurrency(pricingResult.priceRange.low)} \u2013 ${formatCurrency(pricingResult.priceRange.high)}`
+                  : `$${simulation.engagementCost.low.toLocaleString()} \u2013 $${simulation.engagementCost.high.toLocaleString()}`
+                }
               </span>
             </div>
             <div className="rounded-md bg-base px-4 py-3">
               <span className="block text-xs text-text-tertiary mb-1">Estimated Timeline</span>
-              <span className="font-mono text-lg text-text-primary">{simulation.timeline}</span>
+              <span className="font-mono text-lg text-text-primary">
+                {pricingResult ? `${pricingResult.durationDays} days` : simulation.timeline}
+              </span>
             </div>
           </div>
         </div>
+
+        {/* Deal Economics (from pricing engine) */}
+        {pricingResult && (
+          <div className="mb-8">
+            <h3 className="text-xs uppercase tracking-wider text-text-secondary font-medium mb-3">Deal Economics</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="rounded-md bg-base px-4 py-3">
+                <span className="block text-xs text-text-tertiary mb-1">Engagement Tier</span>
+                <Badge variant="amber">{TIER_LABELS[pricingResult.tier] ?? pricingResult.tier}</Badge>
+              </div>
+              <div className="rounded-md bg-base px-4 py-3">
+                <span className="block text-xs text-text-tertiary mb-1">Gross Margin</span>
+                <span className="font-mono text-sm text-text-primary">
+                  {pricingResult.marginRange.low}% &ndash; {pricingResult.marginRange.high}%
+                </span>
+              </div>
+              <div className="rounded-md bg-base px-4 py-3">
+                <span className="block text-xs text-text-tertiary mb-1">Cost to Deliver</span>
+                <span className="font-mono text-sm text-text-primary">
+                  {formatCurrency(pricingResult.costToDeliver)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Team Requirements */}
         <div className="mb-8">

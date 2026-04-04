@@ -10,6 +10,9 @@ import {
   Cell,
 } from 'recharts'
 
+import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
+
 import { Header } from '@/components/layout/Header'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { MetricCard } from '@/components/ui/MetricCard'
@@ -17,7 +20,8 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 
 import { EU_AI_ACT_DEADLINE } from '@/lib/constants'
-import type { Capability, AsyncState } from '@/types'
+import type { Capability, Prospect, ICPScore, AsyncState } from '@/types'
+import type { PredictionAccuracyReport } from '@/lib/predictions'
 
 interface DashboardData {
   data: Capability[]
@@ -53,6 +57,26 @@ function computeDaysUntil(deadline: string): number {
   return Math.max(0, Math.ceil(diff / 86_400_000))
 }
 
+const PIPELINE_STAGE_LABELS: Record<string, { label: string; variant: BadgeVariant }> = {
+  signal_detected: { label: 'Signal', variant: 'gray' },
+  outreach_sent: { label: 'Outreach', variant: 'blue' },
+  response_received: { label: 'Response', variant: 'blue' },
+  meeting_booked: { label: 'Meeting', variant: 'amber' },
+  discovery_complete: { label: 'Discovery', variant: 'amber' },
+  proposal_sent: { label: 'Proposal', variant: 'purple' },
+  verbal_agreement: { label: 'Verbal', variant: 'green' },
+  contract_signed: { label: 'Signed', variant: 'green' },
+  lost: { label: 'Lost', variant: 'red' },
+}
+
+function accuracyColor(pct: number): string {
+  if (pct >= 80) return 'text-[#3D6B35]'
+  if (pct >= 60) return 'text-[#8A6B20]'
+  return 'text-[#8A2020]'
+}
+
+type ProspectWithScore = Prospect & { icpScore: ICPScore }
+
 const CHART_COLORS: Record<string, string> = {
   Production: '#3D6B35',
   Demo: '#8A6B20',
@@ -61,6 +85,8 @@ const CHART_COLORS: Record<string, string> = {
 
 const OverviewPage = (): React.ReactElement => {
   const [dashboard, setDashboard] = useState<AsyncState<DashboardData>>({ status: 'idle' })
+  const [topProspects, setTopProspects] = useState<ProspectWithScore[]>([])
+  const [accuracy, setAccuracy] = useState<PredictionAccuracyReport | null>(null)
 
   useEffect(() => {
     setDashboard({ status: 'loading' })
@@ -71,6 +97,16 @@ const OverviewPage = (): React.ReactElement => {
       })
       .then((data) => setDashboard({ status: 'success', data }))
       .catch((err: Error) => setDashboard({ status: 'error', error: err.message }))
+
+    fetch('/api/prospects?top=5')
+      .then((res) => res.ok ? res.json() as Promise<{ data: ProspectWithScore[] }> : null)
+      .then((result) => { if (result) setTopProspects(result.data) })
+      .catch(() => { /* non-critical — overview still works */ })
+
+    fetch('/api/predictions?accuracy=true')
+      .then((res) => res.ok ? res.json() as Promise<{ data: PredictionAccuracyReport }> : null)
+      .then((result) => { if (result) setAccuracy(result.data) })
+      .catch(() => { /* non-critical */ })
   }, [])
 
   if (dashboard.status === 'loading' || dashboard.status === 'idle') {
@@ -279,6 +315,84 @@ const OverviewPage = (): React.ReactElement => {
               </table>
             </div>
           </Card>
+
+          {/* Section 4: Commercial Intelligence Snapshot */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* Left: Top Prospects */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-text-primary">Top Prospects This Week</h2>
+                <Link
+                  href="/prospects"
+                  className="flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary transition-colors duration-200"
+                >
+                  View all <ArrowRight size={14} />
+                </Link>
+              </div>
+              {topProspects.length > 0 ? (
+                <div className="space-y-3">
+                  {topProspects.map((prospect) => {
+                    const stage = PIPELINE_STAGE_LABELS[prospect.pipeline_stage] ?? { label: prospect.pipeline_stage, variant: 'gray' as BadgeVariant }
+                    return (
+                      <div key={prospect.id} className="flex items-center justify-between py-2 border-b border-border-subtle last:border-b-0">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className={`font-mono text-sm font-semibold tabular-nums ${prospect.icpScore.composite >= 90 ? 'text-[#3D6B35]' : prospect.icpScore.composite >= 80 ? 'text-[#8A6B20]' : 'text-text-secondary'}`}>
+                            {prospect.icpScore.composite}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-text-primary truncate">{prospect.name}</p>
+                            <p className="text-xs text-text-secondary truncate">{prospect.pain_points[0] ?? prospect.industry}</p>
+                          </div>
+                        </div>
+                        <Badge variant={stage.variant} size="sm">{stage.label}</Badge>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-text-tertiary italic py-4 text-center">No prospects tracked yet</p>
+              )}
+            </Card>
+
+            {/* Right: Prediction Track Record */}
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold text-text-primary mb-4">Prediction Track Record</h2>
+              {accuracy && accuracy.total > 0 ? (
+                <div className="space-y-4">
+                  <div>
+                    <div className={`font-mono text-3xl font-semibold tracking-tight ${accuracyColor(accuracy.overallAccuracy)}`}>
+                      {accuracy.overallAccuracy}%
+                    </div>
+                    <p className="text-xs uppercase tracking-wider text-text-secondary font-medium mt-1">
+                      Overall Accuracy
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="font-mono text-text-primary">{accuracy.confirmed} confirmed</span>
+                    <span className="text-text-tertiary">/</span>
+                    <span className="font-mono text-text-primary">{accuracy.confirmed + accuracy.refuted} tested</span>
+                    <span className="text-text-tertiary">of</span>
+                    <span className="font-mono text-text-primary">{accuracy.total} total</span>
+                  </div>
+                  <p className="text-xs text-text-secondary">{accuracy.confidenceNote}</p>
+                  {accuracy.byEngagement.length > 0 && (
+                    <div className="pt-3 border-t border-border-subtle space-y-2">
+                      {accuracy.byEngagement.map((eng) => (
+                        <div key={eng.engagementId} className="flex items-center justify-between text-sm">
+                          <span className="text-text-secondary">{eng.partnerName}</span>
+                          <span className="font-mono text-text-primary">{eng.confirmed}/{eng.total} confirmed</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-text-tertiary italic py-4 text-center">
+                  Prediction tracking begins with first assessment
+                </p>
+              )}
+            </Card>
+          </div>
         </div>
       </PageContainer>
     </>

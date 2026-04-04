@@ -1,6 +1,7 @@
 import { getDb } from './db'
 import { PRICING_GRID, SAE_TRAINING_COST } from '@/lib/constants'
 import type { EngagementTier, ModelFamilyTier } from '@/lib/constants'
+import type { ClassifyResult } from '@/types'
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -9,17 +10,6 @@ interface ClassifyInput {
   useCaseCount: number
   regulatoryRequirements: string[]
   deploymentContext: 'production' | 'pre-deployment' | 'research'
-}
-
-interface ClassifyResult {
-  tier: EngagementTier
-  priceRange: { low: number; high: number }
-  durationDays: number
-  rationale: string
-  costToDeliver: number
-  marginRange: { low: number; high: number }
-  saeCostIfNeeded: number
-  breakeven: { engagementsNeeded: number; note: string } | null
 }
 
 interface EngagementROIInput {

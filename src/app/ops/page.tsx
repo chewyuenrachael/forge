@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/Badge'
 
 import { EU_AI_ACT_DEADLINE } from '@/lib/constants'
 import type { Engagement, ContentCalendarItem, AsyncState } from '@/types'
+import type { PredictionAccuracyReport } from '@/lib/predictions'
 
 type BadgeVariant = 'amber' | 'blue' | 'green' | 'red' | 'purple' | 'gray'
 
@@ -142,8 +143,15 @@ function healthTextColor(score: number): string {
   return 'text-[#8A2020]'
 }
 
+function accuracyColor(pct: number): string {
+  if (pct >= 80) return 'text-[#3D6B35]'
+  if (pct >= 60) return 'text-[#8A6B20]'
+  return 'text-[#8A2020]'
+}
+
 const OpsPage = (): React.ReactElement => {
   const [data, setData] = useState<AsyncState<OpsData>>({ status: 'idle' })
+  const [accuracy, setAccuracy] = useState<PredictionAccuracyReport | null>(null)
 
   useEffect(() => {
     setData({ status: 'loading' })
@@ -154,6 +162,11 @@ const OpsPage = (): React.ReactElement => {
       })
       .then((result) => setData({ status: 'success', data: result }))
       .catch((err: Error) => setData({ status: 'error', error: err.message }))
+
+    fetch('/api/predictions?accuracy=true')
+      .then((res) => res.ok ? res.json() as Promise<{ data: PredictionAccuracyReport }> : null)
+      .then((result) => { if (result) setAccuracy(result.data) })
+      .catch(() => { /* non-critical */ })
   }, [])
 
   if (data.status === 'loading' || data.status === 'idle') {
@@ -317,6 +330,35 @@ const OpsPage = (): React.ReactElement => {
               </div>
             </Card>
           </div>
+
+          {/* Prediction Accuracy */}
+          {accuracy && accuracy.total > 0 && (
+            <Card header="Prediction Accuracy">
+              <div className="flex items-center gap-8">
+                <div>
+                  <span className={`font-mono text-2xl font-semibold ${accuracyColor(accuracy.overallAccuracy)}`}>
+                    {accuracy.overallAccuracy}%
+                  </span>
+                  <p className="text-xs text-text-secondary mt-0.5">Overall accuracy</p>
+                </div>
+                <div className="flex items-center gap-6 text-sm">
+                  <div>
+                    <span className="font-mono text-text-primary">{accuracy.confirmed}</span>
+                    <span className="text-text-secondary ml-1">confirmed</span>
+                  </div>
+                  <div>
+                    <span className="font-mono text-text-primary">{accuracy.refuted}</span>
+                    <span className="text-text-secondary ml-1">refuted</span>
+                  </div>
+                  <div>
+                    <span className="font-mono text-text-primary">{accuracy.untested}</span>
+                    <span className="text-text-secondary ml-1">untested</span>
+                  </div>
+                </div>
+                <p className="text-xs text-text-tertiary ml-auto">{accuracy.confidenceNote}</p>
+              </div>
+            </Card>
+          )}
 
           {/* Recent Activity Feed */}
           <Card header="Recent Activity">

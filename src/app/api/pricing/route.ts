@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { classifyEngagementTier, getPricingSummary } from '@/lib/pricing'
-import { ensureSeeded } from '@/lib/db'
+import { ensureSeeded, getDb } from '@/lib/db'
+import { PRICING_GRID, SAE_TRAINING_COST } from '@/lib/constants'
+import type { EngagementTier, ModelFamilyTier } from '@/lib/constants'
+
+interface BreakevenByTier {
+  tier: EngagementTier
+  engagementsNeeded: number
+  averageMargin: number
+}
+
+interface BreakevenResponse {
+  modelFamilyId: string
+  modelFamilyName: string
+  saeCost: number
+  byTier: BreakevenByTier[]
+}
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
@@ -12,8 +27,51 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ data })
     }
 
+    if (searchParams.get('breakeven') === 'true') {
+      const modelFamily = searchParams.get('modelFamily')
+      if (!modelFamily) {
+        return NextResponse.json(
+          { error: 'modelFamily query parameter is required', code: 'MISSING_PARAMS' },
+          { status: 400 }
+        )
+      }
+
+      const db = getDb()
+      const row = db.prepare('SELECT id, name, tier FROM model_families WHERE id = ?').get(modelFamily) as
+        { id: string; name: string; tier: string } | undefined
+
+      if (!row) {
+        return NextResponse.json(
+          { error: 'Model family not found', code: 'NOT_FOUND' },
+          { status: 404 }
+        )
+      }
+
+      const saeCost = SAE_TRAINING_COST[row.tier as ModelFamilyTier] ?? 0
+
+      const tiers: EngagementTier[] = ['simple', 'standard', 'complex', 'critical']
+      const byTier: BreakevenByTier[] = tiers.map((tier) => {
+        const grid = PRICING_GRID[tier]
+        const midpoint = (grid.low + grid.high) / 2
+        const estimatedMargin = midpoint * 0.55
+        const engagementsNeeded = saeCost > 0 && estimatedMargin > 0
+          ? Math.ceil(saeCost / estimatedMargin)
+          : 0
+
+        return { tier, engagementsNeeded, averageMargin: Math.round(estimatedMargin) }
+      })
+
+      const data: BreakevenResponse = {
+        modelFamilyId: row.id,
+        modelFamilyName: row.name,
+        saeCost,
+        byTier,
+      }
+      return NextResponse.json({ data })
+    }
+
     return NextResponse.json(
-      { error: 'Use ?summary=true or POST to classify a tier', code: 'MISSING_PARAMS' },
+      { error: 'Use ?summary=true, ?breakeven=true&modelFamily=ID, or POST to classify a tier', code: 'MISSING_PARAMS' },
       { status: 400 }
     )
   } catch (error) {
