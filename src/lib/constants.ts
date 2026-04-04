@@ -6,6 +6,7 @@ import {
   BookOpen,
   FlaskConical,
   Layers,
+  Handshake,
   Settings,
 } from 'lucide-react'
 import type { ElementType } from 'react'
@@ -31,6 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Narrative Engine', href: '/narratives', icon: BookOpen },
   { label: 'Research Delivery', href: '/delivery', icon: FlaskConical },
   { label: 'Model Coverage', href: '/models', icon: Layers },
+  { label: 'Channel Partners', href: '/channels', icon: Handshake },
   { label: 'Operations', href: '/ops', icon: Settings },
 ]
 
