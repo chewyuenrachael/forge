@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Activity, Heart, BookOpen } from 'lucide-react'
+import { Activity, Heart, BookOpen, Target } from 'lucide-react'
 
 import { Header } from '@/components/layout/Header'
 import { PageContainer } from '@/components/layout/PageContainer'
@@ -10,14 +10,20 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { EngagementTracker } from '@/components/delivery/EngagementTracker'
 import { NewEngagementModal } from '@/components/delivery/NewEngagementModal'
+import { NewPredictionModal } from '@/components/delivery/NewPredictionModal'
+import { PredictionAccuracy } from '@/components/delivery/PredictionAccuracy'
 
 import type {
   Engagement,
+  Prediction,
+  ModelFamily,
   CreateEngagementInput,
   UpdateEngagementInput,
   UpdateMilestoneInput,
   CreateMilestoneInput,
 } from '@/types'
+import type { PredictionOutcome } from '@/lib/constants'
+import type { CreatePredictionInput, PredictionAccuracyReport } from '@/lib/predictions'
 
 const CAPABILITY_IDS = [
   'cap-rlfr',
@@ -39,9 +45,15 @@ interface MilestoneRow {
 
 const DeliveryPage = (): React.ReactElement => {
   const [engagements, setEngagements] = useState<Engagement[]>([])
+  const [predictions, setPredictions] = useState<Prediction[]>([])
+  const [accuracy, setAccuracy] = useState<PredictionAccuracyReport | null>(null)
+  const [modelFamilies, setModelFamilies] = useState<ModelFamily[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [predictionModal, setPredictionModal] = useState<{ engagementId: string } | null>(null)
+
+  // ─── Fetch Functions ───────────────────────────────────────────────
 
   const fetchEngagements = useCallback(async () => {
     try {
@@ -57,11 +69,47 @@ const DeliveryPage = (): React.ReactElement => {
     }
   }, [])
 
+  const fetchPredictions = useCallback(async () => {
+    try {
+      const res = await fetch('/api/predictions')
+      if (!res.ok) return
+      const json = await res.json() as { data: Prediction[] }
+      setPredictions(json.data)
+    } catch {
+      // Non-critical — predictions will just show as empty
+    }
+  }, [])
+
+  const fetchAccuracy = useCallback(async () => {
+    try {
+      const res = await fetch('/api/predictions?accuracy=true')
+      if (!res.ok) return
+      const json = await res.json() as { data: PredictionAccuracyReport }
+      setAccuracy(json.data)
+    } catch {
+      // Non-critical
+    }
+  }, [])
+
+  const fetchModelFamilies = useCallback(async () => {
+    try {
+      const res = await fetch('/api/predictions?meta=model_families')
+      if (!res.ok) return
+      const json = await res.json() as { data: ModelFamily[] }
+      setModelFamilies(json.data)
+    } catch {
+      // Non-critical — modal will work without model family options
+    }
+  }, [])
+
   useEffect(() => {
     void fetchEngagements()
-  }, [fetchEngagements])
+    void fetchPredictions()
+    void fetchAccuracy()
+    void fetchModelFamilies()
+  }, [fetchEngagements, fetchPredictions, fetchAccuracy, fetchModelFamilies])
 
-  // ─── Mutation Handlers ──────────────────────────────────────────────
+  // ─── Engagement Mutation Handlers ──────────────────────────────────
 
   const handleCreateEngagement = useCallback(async (data: CreateEngagementInput, milestones: MilestoneRow[]) => {
     const res = await fetch('/api/engagements', {
@@ -185,6 +233,42 @@ const DeliveryPage = (): React.ReactElement => {
     }
   }, [fetchEngagements])
 
+  // ─── Prediction Mutation Handlers ──────────────────────────────────
+
+  const handleCreatePrediction = useCallback(async (data: CreatePredictionInput) => {
+    const res = await fetch('/api/predictions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const err = await res.json() as { error: string }
+      throw new Error(err.error)
+    }
+    await Promise.all([fetchPredictions(), fetchAccuracy()])
+  }, [fetchPredictions, fetchAccuracy])
+
+  const handleRecordOutcome = useCallback(async (id: string, outcome: PredictionOutcome, notes?: string) => {
+    // Optimistic update
+    setPredictions((prev) => prev.map((p) =>
+      p.id === id
+        ? { ...p, outcome, outcome_notes: notes ?? null, outcome_date: new Date().toISOString().slice(0, 10) }
+        : p
+    ))
+
+    try {
+      const res = await fetch(`/api/predictions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outcome, outcomeNotes: notes }),
+      })
+      if (!res.ok) throw new Error('Failed to record outcome')
+      await Promise.all([fetchPredictions(), fetchAccuracy()])
+    } catch {
+      await Promise.all([fetchPredictions(), fetchAccuracy()])
+    }
+  }, [fetchPredictions, fetchAccuracy])
+
   // ─── Computed Values ─────────────────────────────────────────────────
 
   const activeCount = engagements.filter((e) => e.status === 'active').length
@@ -192,6 +276,8 @@ const DeliveryPage = (): React.ReactElement => {
     ? Math.round(engagements.reduce((sum, e) => sum + e.health_score, 0) / engagements.length)
     : 0
   const totalCapabilities = new Set(engagements.flatMap((e) => e.capabilities_applied)).size
+
+  const modelFamilyNames = new Map(modelFamilies.map((mf) => [mf.id, mf.name]))
 
   // ─── Render ──────────────────────────────────────────────────────────
 
@@ -201,8 +287,8 @@ const DeliveryPage = (): React.ReactElement => {
         <Header title="Research Delivery Hub" subtitle="Engagement tracking and partner communication" />
         <PageContainer>
           <div className="space-y-6">
-            <div className="grid grid-cols-3 gap-4">
-              {Array.from({ length: 3 }).map((_, i) => (
+            <div className="grid grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="h-24 rounded-lg bg-elevated animate-pulse" />
               ))}
             </div>
@@ -238,7 +324,7 @@ const DeliveryPage = (): React.ReactElement => {
       <PageContainer>
         <div className="space-y-6">
           {/* Metric Cards */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <MetricCard
               value={activeCount}
               label="Active Engagements"
@@ -255,18 +341,39 @@ const DeliveryPage = (): React.ReactElement => {
               label="Capabilities Deployed"
               icon={<BookOpen size={18} />}
             />
+            {accuracy ? (
+              <PredictionAccuracy accuracy={accuracy} compact />
+            ) : (
+              <MetricCard
+                value="—"
+                label="Prediction Accuracy"
+                icon={<Target size={18} />}
+              />
+            )}
           </div>
 
           {/* Engagement Tracker */}
           <EngagementTracker
             engagements={engagements}
+            predictions={predictions}
+            accuracy={accuracy}
             onUpdateEngagement={handleUpdateEngagement}
             onDeleteEngagement={handleDeleteEngagement}
             onUpdateMilestone={handleUpdateMilestone}
             onDeleteMilestone={handleDeleteMilestone}
             onCreateMilestone={handleCreateMilestone}
             onCreateEngagement={() => setShowModal(true)}
+            onCreatePrediction={(engagementId) => setPredictionModal({ engagementId })}
+            onRecordOutcome={handleRecordOutcome}
           />
+
+          {/* Prediction Accuracy Dashboard */}
+          {accuracy && predictions.length > 0 && (
+            <PredictionAccuracy
+              accuracy={accuracy}
+              modelFamilyNames={modelFamilyNames}
+            />
+          )}
         </div>
       </PageContainer>
 
@@ -277,6 +384,17 @@ const DeliveryPage = (): React.ReactElement => {
         onSubmit={handleCreateEngagement}
         availableCapabilities={CAPABILITY_IDS}
       />
+
+      {/* New Prediction Modal */}
+      {predictionModal && (
+        <NewPredictionModal
+          isOpen={true}
+          onClose={() => setPredictionModal(null)}
+          onSubmit={handleCreatePrediction}
+          engagementId={predictionModal.engagementId}
+          modelFamilies={modelFamilies}
+        />
+      )}
     </>
   )
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAllPredictions, createPrediction, recordPredictionOutcome, getPredictionAccuracy } from '@/lib/predictions'
+import { getAllModelFamilies } from '@/lib/knowledge-graph'
 import { ensureSeeded } from '@/lib/db'
 import type { PredictionOutcome } from '@/lib/constants'
 
@@ -7,6 +8,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     ensureSeeded()
     const { searchParams } = new URL(request.url)
+
+    if (searchParams.get('meta') === 'model_families') {
+      const data = getAllModelFamilies()
+      return NextResponse.json({ data })
+    }
 
     if (searchParams.get('accuracy') === 'true') {
       const data = getPredictionAccuracy()

@@ -14,26 +14,35 @@ import {
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Tabs } from '@/components/ui/Tabs'
 import { InlineEdit } from '@/components/delivery/InlineEdit'
 import { StatusDropdown } from '@/components/delivery/StatusDropdown'
+import { PredictionPanel } from '@/components/delivery/PredictionPanel'
 import type {
   Engagement,
   Milestone,
+  Prediction,
   UpdateEngagementInput,
   UpdateMilestoneInput,
   CreateMilestoneInput,
 } from '@/types'
+import type { PredictionOutcome } from '@/lib/constants'
+import type { PredictionAccuracyReport } from '@/lib/predictions'
 
 type BadgeVariant = 'amber' | 'blue' | 'green' | 'red' | 'purple' | 'gray'
 
 interface EngagementTrackerProps {
   engagements: Engagement[]
+  predictions: Prediction[]
+  accuracy: PredictionAccuracyReport | null
   onUpdateEngagement: (id: string, data: UpdateEngagementInput) => Promise<void>
   onDeleteEngagement: (id: string) => Promise<void>
   onUpdateMilestone: (id: string, data: UpdateMilestoneInput) => Promise<void>
   onDeleteMilestone: (id: string) => Promise<void>
   onCreateMilestone: (engagementId: string, data: Omit<CreateMilestoneInput, 'engagement_id'>) => Promise<void>
   onCreateEngagement: () => void
+  onCreatePrediction: (engagementId: string) => void
+  onRecordOutcome: (id: string, outcome: PredictionOutcome, notes?: string) => Promise<void>
 }
 
 const ENG_STATUS_OPTIONS: Array<{ value: string; label: string; variant: BadgeVariant }> = [
@@ -185,15 +194,20 @@ const RowMenu: FC<RowMenuProps> = ({ onDelete }) => {
 
 export const EngagementTracker: FC<EngagementTrackerProps> = ({
   engagements,
+  predictions,
+  accuracy,
   onUpdateEngagement,
   onDeleteEngagement,
   onUpdateMilestone,
   onDeleteMilestone,
   onCreateMilestone,
   onCreateEngagement,
+  onCreatePrediction,
+  onRecordOutcome,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [addingMilestoneFor, setAddingMilestoneFor] = useState<string | null>(null)
+  const [activeTabMap, setActiveTabMap] = useState<Record<string, string>>({})
 
   if (engagements.length === 0) {
     return (
@@ -298,90 +312,120 @@ export const EngagementTracker: FC<EngagementTrackerProps> = ({
                     </td>
                   </tr>
 
-                  {/* Expanded milestone detail */}
-                  {isExpanded && (
-                    <tr>
-                      <td colSpan={7} className="p-0 bg-[#F0EDE6]/30 border-b border-border-subtle">
-                        <div className="px-4 py-4 pl-12">
-                          <div className="flex items-center gap-2 mb-3">
-                            <span className="text-xs uppercase tracking-wider text-text-tertiary font-medium">
-                              Milestones
-                            </span>
-                            <span className="text-xs font-mono text-text-secondary">
-                              Started {eng.start_date}
-                            </span>
-                          </div>
+                  {/* Expanded detail with tabs */}
+                  {isExpanded && (() => {
+                    const activeTab = activeTabMap[eng.id] ?? 'milestones'
+                    const engPredictions = predictions.filter((p) => p.engagement_id === eng.id)
+                    const tabItems = [
+                      { id: 'milestones', label: `Milestones (${eng.milestones.length})` },
+                      { id: 'predictions', label: `Predictions (${engPredictions.length})` },
+                    ]
 
-                          <div className="space-y-1">
-                            {eng.milestones.map((ms) => (
-                              <div key={ms.id} className="group/ms flex items-center gap-3 py-1.5 rounded hover:bg-[#F0EDE6] px-2 -mx-2">
-                                {milestoneIcon(ms.status)}
-                                <div className="flex-1 min-w-0">
-                                  <InlineEdit
-                                    value={ms.title}
-                                    onSave={async (newTitle) => {
-                                      await onUpdateMilestone(ms.id, { title: newTitle })
-                                    }}
-                                    className="text-sm text-text-primary"
-                                  />
-                                </div>
-                                <div onClick={(e) => e.stopPropagation()}>
-                                  <StatusDropdown
-                                    value={ms.status}
-                                    options={MS_STATUS_OPTIONS}
-                                    onChange={async (newStatus) => {
-                                      await onUpdateMilestone(ms.id, { status: newStatus as Milestone['status'] })
-                                    }}
-                                  />
-                                </div>
-                                <InlineEdit
-                                  value={ms.due_date}
-                                  onSave={async (newDate) => {
-                                    await onUpdateMilestone(ms.id, { due_date: newDate })
-                                  }}
-                                  type="date"
-                                  className="font-mono text-xs text-text-secondary"
-                                />
-                                {ms.status === 'completed' && ms.completed_date && (
-                                  <span className="text-xs text-text-tertiary font-mono">
-                                    Done {ms.completed_date}
+                    return (
+                      <tr>
+                        <td colSpan={7} className="p-0 bg-[#F0EDE6]/30 border-b border-border-subtle">
+                          <div className="px-4 py-4 pl-12">
+                            <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+                              <Tabs
+                                tabs={tabItems}
+                                activeTab={activeTab}
+                                onChange={(id) => setActiveTabMap((prev) => ({ ...prev, [eng.id]: id }))}
+                              />
+                            </div>
+
+                            {activeTab === 'milestones' && (
+                              <>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <span className="text-xs font-mono text-text-secondary">
+                                    Started {eng.start_date}
                                   </span>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => void onDeleteMilestone(ms.id)}
-                                  className="opacity-0 group-hover/ms:opacity-100 p-1 text-text-tertiary hover:text-[#8A2020] transition-all"
-                                  aria-label={`Delete milestone: ${ms.title}`}
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
+                                </div>
 
-                          {/* Add milestone */}
-                          {addingMilestoneFor === eng.id ? (
-                            <AddMilestoneForm
-                              engagementId={eng.id}
-                              onAdd={async (engId, data) => {
-                                await onCreateMilestone(engId, data)
-                                setAddingMilestoneFor(null)
-                              }}
-                              onCancel={() => setAddingMilestoneFor(null)}
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setAddingMilestoneFor(eng.id)}
-                              className="flex items-center gap-1 mt-3 text-xs text-text-secondary hover:text-text-primary transition-colors"
-                            >
-                              <Plus size={12} /> Add Milestone
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
+                                <div className="space-y-1">
+                                  {eng.milestones.map((ms) => (
+                                    <div key={ms.id} className="group/ms flex items-center gap-3 py-1.5 rounded hover:bg-[#F0EDE6] px-2 -mx-2">
+                                      {milestoneIcon(ms.status)}
+                                      <div className="flex-1 min-w-0">
+                                        <InlineEdit
+                                          value={ms.title}
+                                          onSave={async (newTitle) => {
+                                            await onUpdateMilestone(ms.id, { title: newTitle })
+                                          }}
+                                          className="text-sm text-text-primary"
+                                        />
+                                      </div>
+                                      <div onClick={(e) => e.stopPropagation()}>
+                                        <StatusDropdown
+                                          value={ms.status}
+                                          options={MS_STATUS_OPTIONS}
+                                          onChange={async (newStatus) => {
+                                            await onUpdateMilestone(ms.id, { status: newStatus as Milestone['status'] })
+                                          }}
+                                        />
+                                      </div>
+                                      <InlineEdit
+                                        value={ms.due_date}
+                                        onSave={async (newDate) => {
+                                          await onUpdateMilestone(ms.id, { due_date: newDate })
+                                        }}
+                                        type="date"
+                                        className="font-mono text-xs text-text-secondary"
+                                      />
+                                      {ms.status === 'completed' && ms.completed_date && (
+                                        <span className="text-xs text-text-tertiary font-mono">
+                                          Done {ms.completed_date}
+                                        </span>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => void onDeleteMilestone(ms.id)}
+                                        className="opacity-0 group-hover/ms:opacity-100 p-1 text-text-tertiary hover:text-[#8A2020] transition-all"
+                                        aria-label={`Delete milestone: ${ms.title}`}
+                                      >
+                                        <Trash2 size={13} />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* Add milestone */}
+                                {addingMilestoneFor === eng.id ? (
+                                  <AddMilestoneForm
+                                    engagementId={eng.id}
+                                    onAdd={async (engId, data) => {
+                                      await onCreateMilestone(engId, data)
+                                      setAddingMilestoneFor(null)
+                                    }}
+                                    onCancel={() => setAddingMilestoneFor(null)}
+                                  />
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setAddingMilestoneFor(eng.id)}
+                                    className="flex items-center gap-1 mt-3 text-xs text-text-secondary hover:text-text-primary transition-colors"
+                                  >
+                                    <Plus size={12} /> Add Milestone
+                                  </button>
+                                )}
+                              </>
+                            )}
+
+                            {activeTab === 'predictions' && (
+                              <div onClick={(e) => e.stopPropagation()}>
+                                <PredictionPanel
+                                  engagement={eng}
+                                  predictions={engPredictions}
+                                  accuracy={accuracy}
+                                  onCreatePrediction={() => onCreatePrediction(eng.id)}
+                                  onRecordOutcome={onRecordOutcome}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })()}
                 </React.Fragment>
               )
             })}
