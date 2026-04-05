@@ -300,6 +300,8 @@ export type EventType =
   | 'pipeline.stage_changed'
   | 'channel_partner.status_changed'
   | 'feedback.submitted'
+  | 'weights.actionability_updated'
+  | 'weights.icp_updated'
 
 // ============================================================
 // DESIGN-ONLY: WEBHOOK TABLE
