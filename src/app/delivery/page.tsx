@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Activity, Heart, BookOpen, Target } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Activity, Heart, BookOpen, Target, ChevronDown, ChevronRight } from 'lucide-react'
 
 import { Header } from '@/components/layout/Header'
 import { PageContainer } from '@/components/layout/PageContainer'
@@ -12,11 +12,17 @@ import { EngagementTracker } from '@/components/delivery/EngagementTracker'
 import { NewEngagementModal } from '@/components/delivery/NewEngagementModal'
 import { NewPredictionModal } from '@/components/delivery/NewPredictionModal'
 import { PredictionAccuracy } from '@/components/delivery/PredictionAccuracy'
+import { HealthAlerts } from '@/components/delivery/HealthAlerts'
+import { ExpansionSuggestion } from '@/components/delivery/ExpansionSuggestion'
+import { AlertsTimeline } from '@/components/delivery/AlertsTimeline'
+import { generateHealthAlerts, generateExpansionOpportunities } from '@/lib/health-alerts'
+import type { HealthAlert, ExpansionOpportunity } from '@/lib/health-alerts'
 
 import type {
   Engagement,
   Prediction,
   ModelFamily,
+  Capability,
   CreateEngagementInput,
   UpdateEngagementInput,
   UpdateMilestoneInput,
@@ -48,10 +54,14 @@ const DeliveryPage = (): React.ReactElement => {
   const [predictions, setPredictions] = useState<Prediction[]>([])
   const [accuracy, setAccuracy] = useState<PredictionAccuracyReport | null>(null)
   const [modelFamilies, setModelFamilies] = useState<ModelFamily[]>([])
+  const [capabilities, setCapabilities] = useState<Capability[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [predictionModal, setPredictionModal] = useState<{ engagementId: string } | null>(null)
+  const [acknowledgedAlertIds, setAcknowledgedAlertIds] = useState<Set<string>>(new Set())
+  const [alertsExpanded, setAlertsExpanded] = useState(true)
+  const [expansionExpanded, setExpansionExpanded] = useState(true)
 
   // ─── Fetch Functions ───────────────────────────────────────────────
 
@@ -102,12 +112,24 @@ const DeliveryPage = (): React.ReactElement => {
     }
   }, [])
 
+  const fetchCapabilities = useCallback(async () => {
+    try {
+      const res = await fetch('/api/knowledge')
+      if (!res.ok) return
+      const json = await res.json() as { data: Capability[] }
+      setCapabilities(json.data ?? [])
+    } catch {
+      // Non-critical — expansion suggestions will just be empty
+    }
+  }, [])
+
   useEffect(() => {
     void fetchEngagements()
     void fetchPredictions()
     void fetchAccuracy()
     void fetchModelFamilies()
-  }, [fetchEngagements, fetchPredictions, fetchAccuracy, fetchModelFamilies])
+    void fetchCapabilities()
+  }, [fetchEngagements, fetchPredictions, fetchAccuracy, fetchModelFamilies, fetchCapabilities])
 
   // ─── Engagement Mutation Handlers ──────────────────────────────────
 
@@ -269,6 +291,37 @@ const DeliveryPage = (): React.ReactElement => {
     }
   }, [fetchPredictions, fetchAccuracy])
 
+  // ─── Health Alerts & Expansion ────────────────────────────────────────
+
+  const healthAlerts = useMemo((): HealthAlert[] => {
+    return generateHealthAlerts(engagements).map((a) => ({
+      ...a,
+      acknowledged: acknowledgedAlertIds.has(a.id) ? true : a.acknowledged,
+    }))
+  }, [engagements, acknowledgedAlertIds])
+
+  const expansionOpportunities = useMemo((): ExpansionOpportunity[] => {
+    return generateExpansionOpportunities(engagements, capabilities, modelFamilies)
+  }, [engagements, capabilities, modelFamilies])
+
+  const activeAlerts = useMemo(() => healthAlerts.filter((a) => !a.acknowledged), [healthAlerts])
+  const hasCritical = activeAlerts.some((a) => a.severity === 'critical')
+
+  const handleAcknowledgeAlert = useCallback((alertId: string): void => {
+    setAcknowledgedAlertIds((prev) => { const next = new Set(prev); next.add(alertId); return next })
+  }, [])
+
+  const handleDraftAction = useCallback((alert: HealthAlert): void => {
+    // Scroll to the engagement row for this alert
+    const el = document.getElementById(`engagement-${alert.engagement_id}`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [])
+
+  const handleInitiateExpansion = useCallback((opportunity: ExpansionOpportunity): void => {
+    // Navigate to solutions with partner pre-filled
+    window.location.href = `/solutions?partner=${encodeURIComponent(opportunity.partner_name)}`
+  }, [])
+
   // ─── Computed Values ─────────────────────────────────────────────────
 
   const activeCount = engagements.filter((e) => e.status === 'active').length
@@ -352,6 +405,60 @@ const DeliveryPage = (): React.ReactElement => {
             )}
           </div>
 
+          {/* Health Alerts */}
+          {activeAlerts.length > 0 && (
+            <Card className={`p-0 overflow-hidden ${hasCritical ? 'border-[#8A2020]/30' : ''}`}>
+              <button
+                onClick={() => setAlertsExpanded(!alertsExpanded)}
+                className="w-full flex items-center justify-between px-6 py-3 text-left hover:bg-[#F0EDE6] transition-colors duration-150"
+              >
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-text-primary">
+                    Health Alerts ({activeAlerts.length})
+                  </h2>
+                  {hasCritical && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#8A2020]/10 text-[#8A2020]">
+                      Critical
+                    </span>
+                  )}
+                </div>
+                {alertsExpanded ? <ChevronDown size={16} className="text-text-tertiary" /> : <ChevronRight size={16} className="text-text-tertiary" />}
+              </button>
+              {alertsExpanded && (
+                <div className="px-6 pb-4">
+                  <HealthAlerts
+                    alerts={healthAlerts}
+                    onAcknowledge={handleAcknowledgeAlert}
+                    onDraftAction={handleDraftAction}
+                  />
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* Expansion Opportunities */}
+          {expansionOpportunities.length > 0 && (
+            <Card className="p-0 overflow-hidden">
+              <button
+                onClick={() => setExpansionExpanded(!expansionExpanded)}
+                className="w-full flex items-center justify-between px-6 py-3 text-left hover:bg-[#F0EDE6] transition-colors duration-150"
+              >
+                <h2 className="text-sm font-semibold text-text-primary">
+                  Expansion Opportunities ({expansionOpportunities.length})
+                </h2>
+                {expansionExpanded ? <ChevronDown size={16} className="text-text-tertiary" /> : <ChevronRight size={16} className="text-text-tertiary" />}
+              </button>
+              {expansionExpanded && (
+                <div className="px-6 pb-4">
+                  <ExpansionSuggestion
+                    opportunities={expansionOpportunities}
+                    onInitiateExpansion={handleInitiateExpansion}
+                  />
+                </div>
+              )}
+            </Card>
+          )}
+
           {/* Engagement Tracker */}
           <EngagementTracker
             engagements={engagements}
@@ -372,6 +479,14 @@ const DeliveryPage = (): React.ReactElement => {
             <PredictionAccuracy
               accuracy={accuracy}
               modelFamilyNames={modelFamilyNames}
+            />
+          )}
+
+          {/* Alerts & Expansion Timeline */}
+          {(healthAlerts.length > 0 || expansionOpportunities.length > 0) && (
+            <AlertsTimeline
+              alerts={healthAlerts}
+              expansions={expansionOpportunities}
             />
           )}
         </div>

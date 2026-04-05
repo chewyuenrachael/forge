@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card'
 import { SignalFeed } from '@/components/gtm/SignalFeed'
 import { ProspectCard } from '@/components/gtm/ProspectCard'
 import { OutreachDraft } from '@/components/gtm/OutreachDraft'
+import { OutreachEngine } from '@/components/outreach/OutreachEngine'
 import { ROICalculatorInputs, ROICalculatorResults } from '@/components/gtm/ROICalculator'
 import type { Signal, Prospect, Capability, ROIResult } from '@/types'
 
@@ -79,6 +80,13 @@ const GTMPage = (): React.JSX.Element => {
       .filter((c): c is Capability => c !== undefined)
   }, [selectedSignal])
 
+  const matchedProspect = useMemo((): Prospect | null => {
+    if (!selectedSignal) return null
+    const firstMatchedId = selectedSignal.matched_prospect_ids?.[0]
+    if (!firstMatchedId) return null
+    return prospects.find((p) => p.id === firstMatchedId) ?? null
+  }, [selectedSignal, prospects])
+
   const pipelineValue = useMemo(
     () => prospects.reduce((sum, p) => sum + p.estimated_ai_spend, 0),
     [prospects]
@@ -141,7 +149,19 @@ const GTMPage = (): React.JSX.Element => {
             <ROICalculatorResults result={roiResult} />
           )}
 
-          {showOutreach && selectedSignal && (
+          {showOutreach && selectedSignal && matchedProspect && (
+            <OutreachEngine
+              prospect={matchedProspect}
+              signal={selectedSignal}
+              capabilities={matchedCapabilities}
+              onGenerated={() => {
+                setShowOutreach(false)
+              }}
+              onClose={() => setShowOutreach(false)}
+            />
+          )}
+
+          {showOutreach && selectedSignal && !matchedProspect && (
             <OutreachDraft signal={selectedSignal} capabilities={matchedCapabilities} />
           )}
 

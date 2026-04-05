@@ -12,6 +12,7 @@ interface PeerClusterViewProps {
   prospects: (Prospect & { icpScore: ICPScore })[]
   onSelectProspect: (id: string) => void
   onStartOutreachBurst: (clusterId: string) => void
+  onPlanDinner: (clusterId: string) => void
 }
 
 type ClusterStatus = 'identified' | 'outreach_active' | 'dinner_planned' | 'converting'
@@ -37,6 +38,7 @@ export const PeerClusterView: FC<PeerClusterViewProps> = ({
   prospects,
   onSelectProspect,
   onStartOutreachBurst,
+  onPlanDinner,
 }) => {
   if (clusters.length === 0) {
     return (
@@ -114,7 +116,12 @@ export const PeerClusterView: FC<PeerClusterViewProps> = ({
                 <Zap size={12} className="mr-1" />
                 Outreach Burst
               </Button>
-              <Button variant="ghost" size="sm" disabled>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onPlanDinner(cluster.id)}
+                disabled={clusterProspects.length === 0}
+              >
                 <CalendarDays size={12} className="mr-1" />
                 Plan Dinner
               </Button>

@@ -20,8 +20,9 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 
 import { EU_AI_ACT_DEADLINE } from '@/lib/constants'
-import type { Capability, Prospect, ICPScore, AsyncState, ModelFamily } from '@/types'
+import type { Capability, Prospect, ICPScore, AsyncState, ModelFamily, ChannelMetrics } from '@/types'
 import type { PredictionAccuracyReport } from '@/lib/predictions'
+import type { EcosystemEvent } from '@/lib/events'
 
 interface DashboardData {
   data: Capability[]
@@ -88,6 +89,8 @@ const OverviewPage = (): React.ReactElement => {
   const [topProspects, setTopProspects] = useState<ProspectWithScore[]>([])
   const [accuracy, setAccuracy] = useState<PredictionAccuracyReport | null>(null)
   const [modelFamilies, setModelFamilies] = useState<ModelFamily[]>([])
+  const [channelMetrics, setChannelMetrics] = useState<ChannelMetrics | null>(null)
+  const [upcomingEvents, setUpcomingEvents] = useState<EcosystemEvent[]>([])
 
 
   useEffect(() => {
@@ -113,6 +116,25 @@ const OverviewPage = (): React.ReactElement => {
     fetch('/api/model-families')
       .then((res) => res.ok ? res.json() as Promise<{ data: ModelFamily[] }> : null)
       .then((result) => { if (result) setModelFamilies(result.data) })
+      .catch(() => { /* non-critical */ })
+
+    fetch('/api/channels?metrics=true')
+      .then((res) => res.ok ? res.json() as Promise<{ data: ChannelMetrics }> : null)
+      .then((result) => { if (result) setChannelMetrics(result.data) })
+      .catch(() => { /* non-critical */ })
+
+    fetch('/api/ecosystem-events')
+      .then((res) => res.ok ? res.json() as Promise<{ data: EcosystemEvent[] }> : null)
+      .then((result) => {
+        if (result) {
+          const today = new Date().toISOString().slice(0, 10)
+          const upcoming = result.data
+            .filter((e) => e.date >= today)
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .slice(0, 3)
+          setUpcomingEvents(upcoming)
+        }
+      })
       .catch(() => { /* non-critical */ })
   }, [])
 
@@ -437,6 +459,68 @@ const OverviewPage = (): React.ReactElement => {
               <p className="text-sm text-text-tertiary italic py-4 text-center">No model family data</p>
             )}
           </Card>
+
+          {/* Section 6: Channel Partnerships + Upcoming Events */}
+          <div className="grid grid-cols-2 gap-6">
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-text-primary">Channel Partnerships</h2>
+                <Link
+                  href="/channels"
+                  className="flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary transition-colors duration-200"
+                >
+                  View all <ArrowRight size={14} />
+                </Link>
+              </div>
+              {channelMetrics ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="font-mono text-2xl font-semibold text-text-primary">{channelMetrics.activePartners}</p>
+                    <p className="text-xs text-text-secondary mt-0.5">Active Partners</p>
+                  </div>
+                  <div>
+                    <p className="font-mono text-2xl font-semibold text-[#3D6B35]">
+                      {channelMetrics.totalEstimatedRevenue >= 1_000_000
+                        ? `$${(channelMetrics.totalEstimatedRevenue / 1_000_000).toFixed(1)}M`
+                        : `$${Math.round(channelMetrics.totalEstimatedRevenue / 1_000)}k`}
+                    </p>
+                    <p className="text-xs text-text-secondary mt-0.5">Est. Annual Revenue</p>
+                  </div>
+                  <div>
+                    <p className="font-mono text-2xl font-semibold text-text-primary">{channelMetrics.totalCertifiedEngineers}</p>
+                    <p className="text-xs text-text-secondary mt-0.5">Certified Engineers</p>
+                  </div>
+                  <div>
+                    <p className="font-mono text-2xl font-semibold text-text-primary">{channelMetrics.totalEngagementsSources}</p>
+                    <p className="text-xs text-text-secondary mt-0.5">Engagements Sourced</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-text-tertiary italic py-4 text-center">No channel data</p>
+              )}
+            </Card>
+
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold text-text-primary mb-4">Upcoming Events</h2>
+              {upcomingEvents.length > 0 ? (
+                <div className="space-y-3">
+                  {upcomingEvents.map((event) => (
+                    <div key={event.id} className="flex items-center justify-between py-2 border-b border-border-subtle last:border-b-0">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-text-primary truncate">{event.name}</p>
+                        <p className="text-xs text-text-secondary">
+                          {event.city} &mdash; {new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                      </div>
+                      <Badge variant="blue" size="sm">{event.type}</Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-text-tertiary italic py-4 text-center">No upcoming events</p>
+              )}
+            </Card>
+          </div>
         </div>
       </PageContainer>
     </>

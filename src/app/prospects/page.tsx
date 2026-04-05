@@ -13,9 +13,10 @@ import { ProspectDetail } from '@/components/prospects/ProspectDetail'
 import { ProspectFilters, type ProspectFilterState, DEFAULT_FILTERS } from '@/components/prospects/ProspectFilters'
 import { PeerClusterView } from '@/components/prospects/PeerClusterView'
 import { NewProspectModal, type CreateProspectFormData } from '@/components/prospects/NewProspectModal'
-import { OutreachBurst } from '@/components/prospects/OutreachBurst'
+import { BurstWorkflow } from '@/components/outreach/BurstWorkflow'
+import { DinnerPlanner } from '@/components/events/DinnerPlanner'
 
-import type { Prospect, ICPScore, PeerCluster, ModelFamily } from '@/types'
+import type { Prospect, ICPScore, PeerCluster, ModelFamily, Signal, Capability, CustomerCategoryDef } from '@/types'
 
 type ProspectWithScore = Prospect & { icpScore: ICPScore }
 type ViewMode = 'table' | 'clusters'
@@ -46,6 +47,8 @@ const ProspectsPageInner = (): React.ReactElement => {
   const [allProspects, setAllProspects] = useState<ProspectWithScore[]>([])
   const [clusters, setClusters] = useState<PeerCluster[]>([])
   const [modelFamilies, setModelFamilies] = useState<ModelFamily[]>([])
+  const [signals, setSignals] = useState<Signal[]>([])
+  const [capabilities, setCapabilities] = useState<Capability[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -53,6 +56,7 @@ const ProspectsPageInner = (): React.ReactElement => {
   const [selectedProspectId, setSelectedProspectId] = useState<string | null>(null)
   const [showNewModal, setShowNewModal] = useState(false)
   const [outreachBurstClusterId, setOutreachBurstClusterId] = useState<string | null>(null)
+  const [dinnerPlannerClusterId, setDinnerPlannerClusterId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [filters, setFilters] = useState<ProspectFilterState>(DEFAULT_FILTERS)
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'icpScore', direction: 'desc' })
@@ -61,10 +65,12 @@ const ProspectsPageInner = (): React.ReactElement => {
 
   const fetchData = useCallback(async (): Promise<void> => {
     try {
-      const [prospectsRes, clustersRes, mfRes] = await Promise.all([
+      const [prospectsRes, clustersRes, mfRes, signalsRes, capRes] = await Promise.all([
         fetch('/api/prospects'),
         fetch('/api/prospects?clusters=true'),
         fetch('/api/model-families'),
+        fetch('/api/signals'),
+        fetch('/api/knowledge'),
       ])
 
       if (!prospectsRes.ok) throw new Error(`Prospects: HTTP ${prospectsRes.status}`)
@@ -78,6 +84,16 @@ const ProspectsPageInner = (): React.ReactElement => {
       setAllProspects(prospectsJson.data)
       setClusters(clustersJson.data)
       setModelFamilies(mfJson.data)
+
+      if (signalsRes.ok) {
+        const sigJson = await signalsRes.json() as { data: Signal[] }
+        setSignals(sigJson.data ?? [])
+      }
+      if (capRes.ok) {
+        const capJson = await capRes.json() as { data: Capability[] }
+        setCapabilities(capJson.data ?? [])
+      }
+
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data')
@@ -134,6 +150,15 @@ const ProspectsPageInner = (): React.ReactElement => {
     if (!outreachBurstClusterId) return []
     return allProspects.filter((p) => p.peer_cluster_id === outreachBurstClusterId)
   }, [allProspects, outreachBurstClusterId])
+
+  const dinnerPlannerCluster = useMemo((): PeerCluster | null => {
+    return clusters.find((c) => c.id === dinnerPlannerClusterId) ?? null
+  }, [clusters, dinnerPlannerClusterId])
+
+  const dinnerPlannerProspects = useMemo((): ProspectWithScore[] => {
+    if (!dinnerPlannerClusterId) return []
+    return allProspects.filter((p) => p.peer_cluster_id === dinnerPlannerClusterId)
+  }, [allProspects, dinnerPlannerClusterId])
 
   // Metrics
   const totalPipelineValue = useMemo(
@@ -333,6 +358,7 @@ const ProspectsPageInner = (): React.ReactElement => {
               setViewMode('table')
             }}
             onStartOutreachBurst={setOutreachBurstClusterId}
+            onPlanDinner={setDinnerPlannerClusterId}
           />
         )}
       </PageContainer>
@@ -359,12 +385,31 @@ const ProspectsPageInner = (): React.ReactElement => {
 
       {/* Outreach Burst */}
       {outreachBurstCluster && (
-        <OutreachBurst
-          isOpen={!!outreachBurstClusterId}
-          onClose={() => setOutreachBurstClusterId(null)}
+        <BurstWorkflow
           cluster={outreachBurstCluster}
           prospects={outreachBurstProspects}
-          onOutreachSaved={() => void fetchData()}
+          signals={signals}
+          capabilities={capabilities}
+          categories={[] as CustomerCategoryDef[]}
+          onComplete={() => {
+            setOutreachBurstClusterId(null)
+            void fetchData()
+          }}
+          onClose={() => setOutreachBurstClusterId(null)}
+        />
+      )}
+
+      {/* Dinner Planner */}
+      {dinnerPlannerCluster && (
+        <DinnerPlanner
+          cluster={dinnerPlannerCluster}
+          prospects={dinnerPlannerProspects}
+          signals={signals}
+          onComplete={() => {
+            setDinnerPlannerClusterId(null)
+            void fetchData()
+          }}
+          onClose={() => setDinnerPlannerClusterId(null)}
         />
       )}
     </>

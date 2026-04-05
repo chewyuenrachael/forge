@@ -5,9 +5,9 @@ import {
   Wrench,
   BookOpen,
   FlaskConical,
-  Layers,
+  Cpu,
   Handshake,
-  Settings,
+  BarChart3,
 } from 'lucide-react'
 import type { ElementType } from 'react'
 
@@ -31,9 +31,9 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Solution Architect', href: '/solutions', icon: Wrench },
   { label: 'Narrative Engine', href: '/narratives', icon: BookOpen },
   { label: 'Research Delivery', href: '/delivery', icon: FlaskConical },
-  { label: 'Model Coverage', href: '/models', icon: Layers },
-  { label: 'Channel Partners', href: '/channels', icon: Handshake },
-  { label: 'Operations', href: '/ops', icon: Settings },
+  { label: 'Channel Partnerships', href: '/channels', icon: Handshake },
+  { label: 'Model Coverage', href: '/models', icon: Cpu },
+  { label: 'Operations', href: '/ops', icon: BarChart3 },
 ]
 
 // ─── Customer Categories (from Goodfire GTM research) ───────────────
