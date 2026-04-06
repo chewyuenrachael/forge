@@ -12,7 +12,9 @@ import { ProspectCard } from '@/components/gtm/ProspectCard'
 import { OutreachDraft } from '@/components/gtm/OutreachDraft'
 import { OutreachEngine } from '@/components/outreach/OutreachEngine'
 import { ROICalculatorInputs, ROICalculatorResults } from '@/components/gtm/ROICalculator'
+import { FeedbackCoverageIndicator } from '@/components/signals/FeedbackCoverageIndicator'
 import type { Signal, Prospect, Capability, ROIResult } from '@/types'
+import type { FeedbackValue } from '@/lib/constants'
 
 // Minimal capability data for OutreachDraft — avoids extra API call
 const CAPABILITY_MAP: Record<string, Capability> = {
@@ -39,6 +41,7 @@ const GTMPage = (): React.JSX.Element => {
   const [showOutreach, setShowOutreach] = useState(false)
   const [loading, setLoading] = useState(true)
   const [roiResult, setRoiResult] = useState<ROIResult | null>(null)
+  const [feedbackCoverage, setFeedbackCoverage] = useState<{ coverage: number; total: number; rated: number } | null>(null)
 
   useEffect(() => {
     const fetchData = async (): Promise<void> => {
@@ -58,6 +61,30 @@ const GTMPage = (): React.JSX.Element => {
       }
     }
     fetchData()
+
+    // Fetch feedback coverage (non-critical)
+    fetch('/api/feedback')
+      .then((r) => r.json() as Promise<{ data: { feedbackCoverage: number; totalSignals: number; feedbackCount: number } }>)
+      .then((result) => {
+        setFeedbackCoverage({
+          coverage: result.data.feedbackCoverage,
+          total: result.data.totalSignals,
+          rated: result.data.feedbackCount,
+        })
+      })
+      .catch(() => { /* non-critical */ })
+  }, [])
+
+  const handleSignalFeedback = useCallback(async (signalId: string, feedback: FeedbackValue): Promise<void> => {
+    const res = await fetch('/api/signals', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: signalId, action: 'feedback', feedback }),
+    })
+    if (res.ok) {
+      const updated = await res.json() as { data: Signal }
+      setSignals((prev) => prev.map((s) => s.id === signalId ? updated.data : s))
+    }
   }, [])
 
   const handleSelectSignal = (signal: Signal): void => {
@@ -137,7 +164,17 @@ const GTMPage = (): React.JSX.Element => {
                 onSelectSignal={handleSelectSignal}
                 onDraftOutreach={handleDraftOutreach}
                 selectedSignalId={selectedSignal?.id}
+                onFeedback={handleSignalFeedback}
               />
+              {feedbackCoverage && (
+                <div className="mt-2">
+                  <FeedbackCoverageIndicator
+                    coverage={feedbackCoverage.coverage}
+                    totalSignals={feedbackCoverage.total}
+                    ratedSignals={feedbackCoverage.rated}
+                  />
+                </div>
+              )}
             </div>
             <div className="col-span-2">
               <ROICalculatorInputs onResultChange={handleRoiResultChange} />

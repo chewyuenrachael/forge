@@ -177,7 +177,7 @@ export const ProspectDetail: FC<ProspectDetailProps> = ({
 
   if (showBriefing && briefingData) {
     return (
-      <div className="fixed inset-y-0 right-0 z-40 w-[480px] bg-surface border-l border-border-subtle shadow-lg overflow-y-auto">
+      <div className="fixed inset-y-0 right-0 z-40 w-[600px] bg-surface border-l border-border-subtle shadow-lg overflow-y-auto">
         <div className="sticky top-0 z-10 bg-surface border-b border-border-subtle px-5 py-3">
           <button
             onClick={() => setShowBriefing(false)}
@@ -202,7 +202,7 @@ export const ProspectDetail: FC<ProspectDetailProps> = ({
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 z-40 w-[480px] bg-surface border-l border-border-subtle shadow-lg overflow-y-auto">
+    <div className="fixed inset-y-0 right-0 z-40 w-[600px] bg-surface border-l border-border-subtle shadow-lg overflow-y-auto">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-surface border-b border-border-subtle px-5 py-4">
         <div className="flex items-start justify-between">

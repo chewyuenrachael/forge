@@ -267,7 +267,7 @@ const ProspectsPageInner = (): React.ReactElement => {
   return (
     <>
       <Header title="Prospect Intelligence" subtitle="ICP scoring, peer clusters, targeted outreach" />
-      <PageContainer>
+      <PageContainer className={selectedProspect ? 'pr-[620px]' : ''}>
         {/* Metric Cards */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           <MetricCard

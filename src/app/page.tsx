@@ -20,9 +20,11 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 
 import { EU_AI_ACT_DEADLINE } from '@/lib/constants'
+import { KeyMetricHighlight } from '@/components/brief/KeyMetricHighlight'
 import type { Capability, Prospect, ICPScore, AsyncState, ModelFamily, ChannelMetrics } from '@/types'
 import type { PredictionAccuracyReport } from '@/lib/predictions'
 import type { EcosystemEvent } from '@/lib/events'
+import type { EnrichedWeeklyBrief } from '@/lib/weekly-brief'
 
 interface DashboardData {
   data: Capability[]
@@ -91,7 +93,7 @@ const OverviewPage = (): React.ReactElement => {
   const [modelFamilies, setModelFamilies] = useState<ModelFamily[]>([])
   const [channelMetrics, setChannelMetrics] = useState<ChannelMetrics | null>(null)
   const [upcomingEvents, setUpcomingEvents] = useState<EcosystemEvent[]>([])
-
+  const [briefSummary, setBriefSummary] = useState<EnrichedWeeklyBrief | null>(null)
 
   useEffect(() => {
     setDashboard({ status: 'loading' })
@@ -135,6 +137,12 @@ const OverviewPage = (): React.ReactElement => {
           setUpcomingEvents(upcoming)
         }
       })
+      .catch(() => { /* non-critical */ })
+
+    // Fetch weekly brief summary (non-critical)
+    fetch('/api/brief')
+      .then((res) => res.ok ? res.json() as Promise<{ data: EnrichedWeeklyBrief }> : null)
+      .then((result) => { if (result) setBriefSummary(result.data) })
       .catch(() => { /* non-critical */ })
   }, [])
 
@@ -228,6 +236,44 @@ const OverviewPage = (): React.ReactElement => {
               </div>
             </div>
           </div>
+
+          {/* Section 1.5: This Week's Brief */}
+          {briefSummary && (
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-display text-lg font-semibold text-text-primary">This Week&apos;s Brief</h2>
+                <Link
+                  href="/ops?brief=true"
+                  className="flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary transition-colors duration-200"
+                >
+                  View Full Brief <ArrowRight size={14} />
+                </Link>
+              </div>
+              <KeyMetricHighlight
+                name={briefSummary.keyMetric.name}
+                value={briefSummary.keyMetric.value}
+                trend={briefSummary.keyMetric.trend}
+                context={briefSummary.keyMetricContext}
+              />
+              <ul className="mt-4 space-y-1.5">
+                <li className="text-sm text-text-secondary">
+                  <span className="font-mono text-text-primary">{briefSummary.newSignals.length}</span> new signals detected
+                </li>
+                <li className="text-sm text-text-secondary">
+                  Pipeline: <span className="font-mono text-text-primary">{briefSummary.pipelineMovement.advanced}</span> advanced, <span className="font-mono text-text-primary">{briefSummary.pipelineMovement.stalled}</span> stalled
+                </li>
+                <li className="text-sm text-text-secondary">
+                  Engagements: <span className="font-mono text-text-primary">{briefSummary.engagementHealth.healthy}</span> healthy, <span className="font-mono text-text-primary">{briefSummary.engagementHealth.atRisk}</span> at risk
+                </li>
+                <li className="text-sm text-text-secondary">
+                  Predictions: <span className="font-mono text-text-primary">{briefSummary.predictionSummary.confirmed}</span> confirmed — <span className="font-mono text-text-primary">{briefSummary.predictionSummary.accuracy}%</span> accuracy
+                </li>
+                <li className="text-sm text-text-secondary">
+                  EU AI Act: <span className="font-mono text-accent-amber">{briefSummary.euAiActDays}</span> days remaining
+                </li>
+              </ul>
+            </Card>
+          )}
 
           {/* Section 2: Timeline + Readiness Distribution */}
           <div className="grid grid-cols-5 gap-6">

@@ -4,14 +4,17 @@ import { type FC, useState, useMemo } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Tabs } from '@/components/ui/Tabs'
+import { FeedbackButtons } from '@/components/signals/FeedbackButtons'
 import { Send } from 'lucide-react'
 import type { Signal } from '@/types'
+import type { FeedbackValue } from '@/lib/constants'
 
 interface SignalFeedProps {
   signals: Signal[]
   onSelectSignal: (signal: Signal) => void
   onDraftOutreach: (signal: Signal) => void
   selectedSignalId?: string
+  onFeedback?: (signalId: string, feedback: FeedbackValue) => Promise<void>
 }
 
 const TYPE_BADGE_VARIANT: Record<Signal['type'], 'amber' | 'blue' | 'green' | 'red' | 'purple'> = {
@@ -42,7 +45,7 @@ const SORT_TABS = [
   { id: 'type', label: 'Type' },
 ]
 
-export const SignalFeed: FC<SignalFeedProps> = ({ signals, onSelectSignal, onDraftOutreach, selectedSignalId }) => {
+export const SignalFeed: FC<SignalFeedProps> = ({ signals, onSelectSignal, onDraftOutreach, selectedSignalId, onFeedback }) => {
   const [sortBy, setSortBy] = useState('relevance')
 
   const sortedSignals = useMemo(() => {
@@ -97,19 +100,31 @@ export const SignalFeed: FC<SignalFeedProps> = ({ signals, onSelectSignal, onDra
                     <Badge key={capId} variant="gray">{CAPABILITY_NAMES[capId] ?? capId}</Badge>
                   ))}
                 </div>
-                <Button
-                  variant="ghost"
-                  className="shrink-0 ml-2"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDraftOutreach(signal)
-                  }}
-                >
-                  <span className="flex items-center gap-1">
-                    <Send className="h-3 w-3" />
-                    Draft Outreach
-                  </span>
-                </Button>
+                <div className="flex items-center gap-2">
+                  {onFeedback && (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <FeedbackButtons
+                        signalId={signal.id}
+                        currentFeedback={signal.feedback}
+                        onFeedback={onFeedback}
+                        compact
+                      />
+                    </div>
+                  )}
+                  <Button
+                    variant="ghost"
+                    className="shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDraftOutreach(signal)
+                    }}
+                  >
+                    <span className="flex items-center gap-1">
+                      <Send className="h-3 w-3" />
+                      Draft Outreach
+                    </span>
+                  </Button>
+                </div>
               </div>
             </button>
           )

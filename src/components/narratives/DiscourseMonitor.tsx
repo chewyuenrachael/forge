@@ -4,12 +4,15 @@ import { type FC } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { FeedbackButtons } from '@/components/signals/FeedbackButtons'
 import type { Signal } from '@/types'
+import type { FeedbackValue } from '@/lib/constants'
 
 interface DiscourseMonitorProps {
   signals: Signal[]
   onSelectSignal: (signal: Signal) => void
   selectedSignalId?: string
+  onFeedback?: (signalId: string, feedback: FeedbackValue) => Promise<void>
 }
 
 const TYPE_BADGE: Record<string, { label: string; variant: 'amber' | 'blue' | 'purple' | 'green' }> = {
@@ -33,7 +36,7 @@ const CAPABILITY_NAMES: Record<string, string> = {
   'cap-reasoning-hood': 'Reasoning Hood',
 }
 
-export const DiscourseMonitor: FC<DiscourseMonitorProps> = ({ signals, onSelectSignal, selectedSignalId }) => {
+export const DiscourseMonitor: FC<DiscourseMonitorProps> = ({ signals, onSelectSignal, selectedSignalId, onFeedback }) => {
   return (
     <div className="space-y-1">
       <h2 className="text-xs uppercase tracking-wider text-text-secondary font-medium mb-3">Discourse Feed</h2>
@@ -63,7 +66,17 @@ export const DiscourseMonitor: FC<DiscourseMonitorProps> = ({ signals, onSelectS
                   <span className="font-mono text-xs text-accent-amber">Relevance: {signal.relevance_score}</span>
                 </div>
                 <p className="text-xs text-text-secondary italic leading-relaxed">{signal.narrative_angle}</p>
-                <div className="flex gap-2 pt-1">
+                <div className="flex items-center gap-2 pt-1">
+                  {onFeedback && (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <FeedbackButtons
+                        signalId={signal.id}
+                        currentFeedback={signal.feedback}
+                        onFeedback={onFeedback}
+                        compact
+                      />
+                    </div>
+                  )}
                   <Button variant="ghost" className="text-xs h-7 px-2" onClick={(e) => { e.stopPropagation(); onSelectSignal(signal) }}>
                     Frame for Audiences
                   </Button>

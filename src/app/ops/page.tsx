@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import {
   TrendingUp, Users, Shield, Activity, BarChart3,
   ChevronDown, ChevronRight, CheckCircle, XCircle, HelpCircle,
+  FileText, X,
 } from 'lucide-react'
 
 import { Header } from '@/components/layout/Header'
@@ -18,15 +19,27 @@ import { CategoryBreakdown } from '@/components/ops/CategoryBreakdown'
 import { PipelineFunnel } from '@/components/ops/PipelineFunnel'
 import { RevenueEngineView } from '@/components/ops/RevenueEngineView'
 import { WeeklyPriorityList } from '@/components/ops/WeeklyPriorityList'
+import { ConversionFunnel } from '@/components/analytics/ConversionFunnel'
+import { SourcePerformance } from '@/components/analytics/SourcePerformance'
+import { FramingEffectiveness } from '@/components/analytics/FramingEffectiveness'
+import { WeightTuner } from '@/components/analytics/WeightTuner'
+import { ExperimentLog } from '@/components/analytics/ExperimentLog'
+import { SignalQualityReport } from '@/components/signals/SignalQualityReport'
+import { SignalDecayStatus } from '@/components/signals/SignalDecayStatus'
+import { WeeklyBrief } from '@/components/brief/WeeklyBrief'
 
 import { EU_AI_ACT_DEADLINE } from '@/lib/constants'
 import type {
-  Prospect, ICPScore, ICPWeights, PipelineOverview,
+  Prospect, ICPScore, ICPWeights, ActionabilityWeights, PipelineOverview,
   CustomerCategoryDef, ChannelMetrics, Engagement, Signal,
   EventLog, AsyncState,
 } from '@/types'
 import type { PredictionAccuracyReport } from '@/lib/predictions'
-import type { SystemHealth } from '@/lib/feedback'
+import type { SystemHealth, SignalFeedbackStats } from '@/lib/feedback'
+import type {
+  ConversionBySignalType, ConversionByCategory, ConversionByAudienceFraming,
+  WeightSuggestion, ICPWeightSuggestion, WeightChangeRecord,
+} from '@/lib/analytics'
 
 // ─── Page Data ──────────────────────────────────────────────────────
 
@@ -41,6 +54,13 @@ interface OpsPageData {
   icpWeights: ICPWeights
   accuracy: PredictionAccuracyReport | null
   signals: Signal[]
+  conversionBySignalType: ConversionBySignalType[]
+  conversionByCategory: ConversionByCategory[]
+  conversionByFraming: ConversionByAudienceFraming[]
+  weightSuggestions: WeightSuggestion & { currentWeights: ActionabilityWeights }
+  icpSuggestions: ICPWeightSuggestion
+  weightHistory: WeightChangeRecord[]
+  feedbackStats: SignalFeedbackStats
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -174,6 +194,14 @@ function SystemHealthBadge({ health }: { health: SystemHealth }): React.ReactEle
 
 const OpsPage = (): React.ReactElement => {
   const [data, setData] = useState<AsyncState<OpsPageData>>({ status: 'idle' })
+  const [showBrief, setShowBrief] = useState(false)
+
+  // Auto-open brief when navigating from overview with ?brief=true
+  useEffect(() => {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('brief') === 'true') {
+      setShowBrief(true)
+    }
+  }, [])
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     metrics: true,
     funnel: true,
@@ -182,6 +210,9 @@ const OpsPage = (): React.ReactElement => {
     priority: true,
     health: true,
     activity: false,
+    analytics: true,
+    analyticsQuality: false,
+    analyticsDecay: false,
   })
 
   const toggleSection = useCallback((key: string): void => {
@@ -202,8 +233,16 @@ const OpsPage = (): React.ReactElement => {
       fetch('/api/icp-weights').then((r) => r.json() as Promise<{ data: ICPWeights }>),
       fetch('/api/predictions?accuracy=true').then((r) => r.ok ? r.json() as Promise<{ data: PredictionAccuracyReport }> : Promise.resolve(null)),
       fetch('/api/signals').then((r) => r.json() as Promise<{ data: Signal[] }>),
+      fetch('/api/analytics?type=signal_type').then((r) => r.json() as Promise<{ data: ConversionBySignalType[] }>),
+      fetch('/api/analytics?type=category').then((r) => r.json() as Promise<{ data: ConversionByCategory[] }>),
+      fetch('/api/analytics?type=audience_framing').then((r) => r.json() as Promise<{ data: ConversionByAudienceFraming[] }>),
+      fetch('/api/analytics?type=weight_suggestions').then((r) => r.json() as Promise<{ data: WeightSuggestion & { currentWeights: ActionabilityWeights } }>),
+      fetch('/api/analytics?type=icp_suggestions').then((r) => r.json() as Promise<{ data: ICPWeightSuggestion }>),
+      fetch('/api/analytics?type=weight_history').then((r) => r.json() as Promise<{ data: WeightChangeRecord[] }>),
+      fetch('/api/feedback').then((r) => r.json() as Promise<{ data: SignalFeedbackStats }>),
     ])
-      .then(([pipeline, categories, prospects, channels, engagements, health, events, weights, accuracy, signals]) => {
+      .then(([pipeline, categories, prospects, channels, engagements, health, events, weights, accuracy, signals,
+              convSignal, convCategory, convFraming, weightSugg, icpSugg, weightHist, fbStats]) => {
         setData({
           status: 'success',
           data: {
@@ -217,6 +256,13 @@ const OpsPage = (): React.ReactElement => {
             icpWeights: weights.data,
             accuracy: accuracy?.data ?? null,
             signals: signals.data,
+            conversionBySignalType: convSignal.data,
+            conversionByCategory: convCategory.data,
+            conversionByFraming: convFraming.data,
+            weightSuggestions: weightSugg.data,
+            icpSuggestions: icpSugg.data,
+            weightHistory: weightHist.data,
+            feedbackStats: fbStats.data,
           },
         })
       })
@@ -283,6 +329,8 @@ const OpsPage = (): React.ReactElement => {
     pipeline, categories, topProspects, channelMetrics,
     engagements, systemHealth, activityFeed, icpWeights,
     accuracy, signals,
+    conversionBySignalType, conversionByCategory, conversionByFraming,
+    weightSuggestions, icpSuggestions, weightHistory, feedbackStats,
   } = data.data
 
   const daysUntil = computeDaysUntil(EU_AI_ACT_DEADLINE)
@@ -304,13 +352,44 @@ const OpsPage = (): React.ReactElement => {
     fetchData()
   }
 
+  async function handleActionabilityWeightsUpdate(weights: ActionabilityWeights): Promise<void> {
+    const res = await fetch('/api/analytics', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update_actionability_weights', weights }),
+    })
+    if (!res.ok) {
+      const err = await res.json() as { error: string }
+      throw new Error(err.error)
+    }
+    fetchData()
+  }
+
+  async function handleTriggerDecay(): Promise<void> {
+    await fetch('/api/analytics', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'trigger_decay' }),
+    })
+    fetchData()
+  }
+
   return (
     <>
       <Header title="Operations" subtitle="Market intelligence → Pipeline analytics → Revenue tracking" />
       <PageContainer>
         <div className="space-y-6">
-          {/* System Health */}
-          <SystemHealthBadge health={systemHealth} />
+          {/* System Health + Weekly Brief Button */}
+          <div className="flex items-center justify-between">
+            <SystemHealthBadge health={systemHealth} />
+            <button
+              onClick={() => setShowBrief(true)}
+              className="inline-flex items-center gap-1.5 h-9 px-4 text-sm font-medium rounded-md border border-border-default text-text-primary hover:bg-elevated transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#C45A3C]/30 focus:ring-offset-2 focus:ring-offset-[#FAFAF7]"
+            >
+              <FileText size={14} />
+              Generate Weekly Brief
+            </button>
+          </div>
 
           {/* ROW 1: Metric Cards */}
           <CollapsibleSection title="Key Metrics" sectionKey="metrics" expanded={expanded} onToggle={toggleSection}>
@@ -469,7 +548,7 @@ const OpsPage = (): React.ReactElement => {
                       <div key={event.id} className="flex items-start gap-3 py-3 border-b border-border-subtle last:border-b-0">
                         <Badge variant={badge.variant} size="sm">{badge.label}</Badge>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-text-primary truncate">
+                          <p className="text-sm text-text-primary">
                             {eventDescription(event)}
                           </p>
                         </div>
@@ -514,8 +593,66 @@ const OpsPage = (): React.ReactElement => {
               </Card>
             </CollapsibleSection>
           )}
+
+          {/* ROW 8: Conversion Analytics & Feedback Loops */}
+          <CollapsibleSection title="Conversion Analytics & Feedback Loops" sectionKey="analytics" expanded={expanded} onToggle={toggleSection}>
+            <div className="space-y-6">
+              {/* Conversion Funnel + Source Performance */}
+              <div className="grid grid-cols-2 gap-6">
+                <ConversionFunnel data={conversionBySignalType} />
+                <SourcePerformance bySignalType={conversionBySignalType} byCategory={conversionByCategory} />
+              </div>
+
+              {/* Framing Effectiveness */}
+              <FramingEffectiveness data={conversionByFraming} />
+
+              {/* Weight Tuner */}
+              <WeightTuner
+                currentActionabilityWeights={weightSuggestions.currentWeights}
+                suggestedActionabilityWeights={weightSuggestions.suggestedWeights}
+                actionabilityRationale={weightSuggestions.rationale}
+                currentICPWeights={icpWeights}
+                suggestedICPWeights={icpSuggestions.suggestedWeights}
+                icpRationale={icpSuggestions.rationale}
+                confidenceLevel={weightSuggestions.confidenceLevel}
+                onApplyActionabilityWeights={handleActionabilityWeightsUpdate}
+                onApplyICPWeights={handleWeightsUpdate}
+              />
+
+              {/* Signal Quality + Experiment Log (collapsible) */}
+              <CollapsibleSection title="Signal Quality & Experiment History" sectionKey="analyticsQuality" expanded={expanded} onToggle={toggleSection}>
+                <div className="grid grid-cols-2 gap-6">
+                  <SignalQualityReport stats={feedbackStats} />
+                  <ExperimentLog changes={weightHistory} />
+                </div>
+              </CollapsibleSection>
+
+              {/* Signal Decay Status (collapsible) */}
+              <CollapsibleSection title="Signal Decay Management" sectionKey="analyticsDecay" expanded={expanded} onToggle={toggleSection}>
+                <SignalDecayStatus signals={signals} onTriggerDecay={handleTriggerDecay} />
+              </CollapsibleSection>
+            </div>
+          </CollapsibleSection>
         </div>
       </PageContainer>
+
+      {/* Weekly Brief Overlay */}
+      {showBrief && (
+        <div className="fixed inset-0 z-50 bg-base/95 overflow-y-auto">
+          <div className="max-w-4xl mx-auto px-10 py-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-display text-lg font-semibold text-text-primary">Weekly GTM Brief</h2>
+              <button
+                onClick={() => setShowBrief(false)}
+                className="p-1.5 rounded-md text-text-secondary hover:text-text-primary hover:bg-elevated transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#C45A3C]/30"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <WeeklyBrief />
+          </div>
+        </div>
+      )}
     </>
   )
 }

@@ -19,7 +19,7 @@ export const CompetitiveLandscape: FC<CompetitiveLandscapeProps> = ({ prospect }
         Three alternatives {prospect.name} is considering:
       </p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {/* Option A: Do Nothing */}
         <Card
           header={

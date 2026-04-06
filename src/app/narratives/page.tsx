@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Header } from '@/components/layout/Header'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { DiscourseMonitor } from '@/components/narratives/DiscourseMonitor'
 import { ContentCalendar } from '@/components/narratives/ContentCalendar'
 import { AudienceFramer } from '@/components/narratives/AudienceFramer'
 import { NarrativeDraft } from '@/components/narratives/NarrativeDraft'
+import { FeedbackCoverageIndicator } from '@/components/signals/FeedbackCoverageIndicator'
 import type { Signal, Capability, ContentCalendarItem } from '@/types'
+import type { FeedbackValue } from '@/lib/constants'
 
 // ─── Discourse Signals ─────────────────────────────────────────────────────────
 
@@ -163,8 +165,39 @@ const CAPABILITIES: Record<string, Capability> = {
 // ─── Page Component ────────────────────────────────────────────────────────────
 
 const NarrativesPage = (): React.JSX.Element => {
+  const [discourseSignals, setDiscourseSignals] = useState<Signal[]>(DISCOURSE_SIGNALS)
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined)
+  const [feedbackCoverage, setFeedbackCoverage] = useState<{ coverage: number; total: number; rated: number } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/feedback')
+      .then((r) => r.json() as Promise<{ data: { feedbackCoverage: number; totalSignals: number; feedbackCount: number } }>)
+      .then((result) => {
+        setFeedbackCoverage({
+          coverage: result.data.feedbackCoverage,
+          total: result.data.totalSignals,
+          rated: result.data.feedbackCount,
+        })
+      })
+      .catch(() => { /* non-critical */ })
+  }, [])
+
+  const handleDiscourseSignalFeedback = useCallback(async (signalId: string, feedback: FeedbackValue): Promise<void> => {
+    // Optimistic local update (these signals are hardcoded, API may 404)
+    setDiscourseSignals((prev) =>
+      prev.map((s) => s.id === signalId ? { ...s, feedback: s.feedback === feedback ? null : feedback } : s)
+    )
+    try {
+      await fetch('/api/signals', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: signalId, action: 'feedback', feedback }),
+      })
+    } catch {
+      // Graceful degradation — hardcoded signals may not exist in DB
+    }
+  }, [])
 
   const matchedCapability: Capability | undefined = selectedSignal
     ? CAPABILITIES[selectedSignal.matched_capability_ids[0] ?? '']
@@ -180,10 +213,20 @@ const NarrativesPage = (): React.JSX.Element => {
           <div className="grid grid-cols-5 gap-6">
             <div className="col-span-3">
               <DiscourseMonitor
-                signals={DISCOURSE_SIGNALS}
+                signals={discourseSignals}
                 onSelectSignal={setSelectedSignal}
                 selectedSignalId={selectedSignal?.id}
+                onFeedback={handleDiscourseSignalFeedback}
               />
+              {feedbackCoverage && (
+                <div className="mt-2">
+                  <FeedbackCoverageIndicator
+                    coverage={feedbackCoverage.coverage}
+                    totalSignals={feedbackCoverage.total}
+                    ratedSignals={feedbackCoverage.rated}
+                  />
+                </div>
+              )}
             </div>
             <div className="col-span-2">
               <ContentCalendar
