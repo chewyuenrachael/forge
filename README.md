@@ -2,9 +2,7 @@
 
 > **The operating system that turns Goodfire's frontier interpretability research into a self-improving commercial engine — from signal detection through deal close through partner expansion.**
 
-[Watch the 90-second walkthrough →](https://www.loom.com/share/YOUR_LOOM_LINK)
-
-![Forge Operations Dashboard](./docs/screenshots/operations-dashboard.png)
+<video src="./docs/forge-demo.mp4" controls autoplay muted loop width="100%"></video>
 
 ---
 
