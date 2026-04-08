@@ -1,63 +1,13 @@
 import Database from 'better-sqlite3'
 import path from 'path'
-import fs from 'fs'
-
-// ─── Environment Detection ──────────────────────────────────────────
 
 const isVercel = process.env.VERCEL === '1'
 
-// ─── Database Path Resolution ───────────────────────────────────────
-
-function resolveDbPath(): string {
-  const bundledPath = path.join(process.cwd(), 'forge.db')
-
-  // On Vercel: copy the bundled read-only db to /tmp (writable)
-  // so that mutations work within a single function invocation.
-  // Changes don't persist across cold starts — this is demo mode.
-  if (isVercel) {
-    const tmpPath = '/tmp/forge.db'
-    if (!fs.existsSync(tmpPath) && fs.existsSync(bundledPath)) {
-      fs.copyFileSync(bundledPath, tmpPath)
-    }
-    return tmpPath
-  }
-
-  // Locally: use the file directly at the project root
-  return bundledPath
-}
-
-// ─── Singleton ──────────────────────────────────────────────────────
+// On Vercel: in-memory database, re-seeded on each cold start
+// Locally: file-based database at project root
+const dbPath = isVercel ? ':memory:' : path.join(process.cwd(), 'forge.db')
 
 let _db: Database.Database | null = null
-
-function createDatabase(): Database.Database {
-  const dbPath = resolveDbPath()
-  const database = new Database(dbPath)
-
-  // Journal mode: WAL locally for performance, DELETE on Vercel
-  // because /tmp's constraints can cause WAL sidecar issues on cold start.
-  if (isVercel) {
-    database.pragma('journal_mode = DELETE')
-  } else {
-    database.pragma('journal_mode = WAL')
-  }
-
-  database.pragma('foreign_keys = ON')
-
-  initializeSchema(database)
-  return database
-}
-
-export function getDb(): Database.Database {
-  if (!_db) {
-    _db = createDatabase()
-  }
-  return _db
-}
-
-// Default export for code that does `import db from './db'`
-const db = getDb()
-export default db
 
 // ─── JSON Helpers ───────────────────────────────────────────────────
 
@@ -74,6 +24,35 @@ export function toJsonString(arr: string[]): string {
   return JSON.stringify(arr)
 }
 
+
+// ─── Database Singleton ─────────────────────────────────────────────
+
+export function getDb(): Database.Database {
+  if (!_db) {
+    _db = new Database(dbPath)
+    
+    // WAL mode only for file-based (local) databases
+    if (!isVercel) {
+      _db.pragma('journal_mode = WAL')
+    }
+    _db.pragma('foreign_keys = ON')
+    
+    initializeSchema(_db)
+    
+    // On Vercel, seed immediately since there's no persistent file
+    if (isVercel) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { seedDatabase } = require('@/data/seed')
+      seedDatabase(_db)
+    }
+  }
+  return _db
+}
+
+// Default export so `import db from '@/lib/db'` also works
+const db = getDb()
+export default db
+
 // ─── Schema Initialization ──────────────────────────────────────────
 
 function initializeSchema(db: Database.Database): void {
@@ -81,6 +60,7 @@ function initializeSchema(db: Database.Database): void {
   // LAYER 1: REFERENCE DATA
   // ────────────────────────────────────────────────────────────────
 
+  // Access: GTM Lead (read), Applied AI Lead (read/write), Researcher (read), Leadership (read)
   db.exec(`
     CREATE TABLE IF NOT EXISTS model_families (
       id TEXT PRIMARY KEY,
@@ -96,6 +76,7 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // Access: All roles (read), Leadership (read/write)
   db.exec(`
     CREATE TABLE IF NOT EXISTS customer_categories (
       id TEXT PRIMARY KEY,
@@ -111,6 +92,7 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // Access: All roles (read), Leadership (read/write)
   db.exec(`
     CREATE TABLE IF NOT EXISTS engagement_tiers (
       id TEXT PRIMARY KEY,
@@ -125,6 +107,7 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // Access: GTM Lead (read/write), Applied AI Lead (read), Researcher (none), Leadership (read)
   db.exec(`
     CREATE TABLE IF NOT EXISTS audiences (
       id TEXT PRIMARY KEY,
@@ -137,6 +120,7 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // Access: All roles (read), Applied AI Lead (read/write), Researcher (read/write)
   db.exec(`
     CREATE TABLE IF NOT EXISTS capabilities (
       id TEXT PRIMARY KEY,
@@ -154,6 +138,7 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // Access: GTM Lead (read/write), Applied AI Lead (read), Researcher (none), Leadership (read)
   db.exec(`
     CREATE TABLE IF NOT EXISTS peer_clusters (
       id TEXT PRIMARY KEY,
@@ -166,6 +151,7 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // Access: GTM Lead (read/write), Applied AI Lead (read), Researcher (none), Leadership (read)
   db.exec(`
     CREATE TABLE IF NOT EXISTS channel_partners (
       id TEXT PRIMARY KEY,
@@ -183,6 +169,11 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // ────────────────────────────────────────────────────────────────
+  // LAYER 1 (continued): REFERENCE DATA with FK dependencies
+  // ────────────────────────────────────────────────────────────────
+
+  // Access: Applied AI Lead (read/write), Researcher (read), Leadership (read)
   db.exec(`
     CREATE TABLE IF NOT EXISTS evidence (
       id TEXT PRIMARY KEY,
@@ -199,6 +190,7 @@ function initializeSchema(db: Database.Database): void {
   // LAYER 2: OPERATIONAL STATE
   // ────────────────────────────────────────────────────────────────
 
+  // Access: GTM Lead (read/write), Applied AI Lead (read), Researcher (none), Leadership (read)
   db.exec(`
     CREATE TABLE IF NOT EXISTS prospects (
       id TEXT PRIMARY KEY,
@@ -222,6 +214,7 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // Access: GTM Lead (read/write), Applied AI Lead (read), Researcher (none), Leadership (read)
   db.exec(`
     CREATE TABLE IF NOT EXISTS signals (
       id TEXT PRIMARY KEY,
@@ -247,6 +240,7 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // Access: GTM Lead (read/write), Applied AI Lead (read/write), Researcher (read), Leadership (read)
   db.exec(`
     CREATE TABLE IF NOT EXISTS engagements (
       id TEXT PRIMARY KEY,
@@ -270,6 +264,7 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // Access: GTM Lead (read), Applied AI Lead (read/write), Researcher (read), Leadership (read)
   db.exec(`
     CREATE TABLE IF NOT EXISTS content_calendar (
       id TEXT PRIMARY KEY,
@@ -283,6 +278,11 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // ────────────────────────────────────────────────────────────────
+  // LAYER 2 (continued): Tables with FK to engagements
+  // ────────────────────────────────────────────────────────────────
+
+  // Access: Applied AI Lead (read/write), GTM Lead (read), Researcher (read), Leadership (read)
   db.exec(`
     CREATE TABLE IF NOT EXISTS milestones (
       id TEXT PRIMARY KEY,
@@ -298,6 +298,7 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // Access: Applied AI Lead (read/write), Researcher (read/write), Leadership (read)
   db.exec(`
     CREATE TABLE IF NOT EXISTS predictions (
       id TEXT PRIMARY KEY,
@@ -315,6 +316,7 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // Access: GTM Lead (read/write), Applied AI Lead (read), Leadership (read)
   db.exec(`
     CREATE TABLE IF NOT EXISTS proposals (
       id TEXT PRIMARY KEY,
@@ -333,6 +335,7 @@ function initializeSchema(db: Database.Database): void {
   // CROSS-CUTTING: Configuration, Event Log, Webhooks
   // ────────────────────────────────────────────────────────────────
 
+  // Access: GTM Lead (read/write)
   db.exec(`
     CREATE TABLE IF NOT EXISTS actionability_weights (
       id TEXT PRIMARY KEY DEFAULT 'default',
@@ -344,6 +347,7 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
+  // Access: GTM Lead (read/write)
   db.exec(`
     CREATE TABLE IF NOT EXISTS icp_weights (
       id TEXT PRIMARY KEY DEFAULT 'default',
@@ -355,7 +359,8 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
-  // Append-only event log. NO UPDATE OR DELETE operations.
+  // Access: All roles (read), System (append-only write)
+  // NO UPDATE OR DELETE operations on this table. Append only.
   db.exec(`
     CREATE TABLE IF NOT EXISTS event_log (
       id TEXT PRIMARY KEY,
@@ -368,7 +373,8 @@ function initializeSchema(db: Database.Database): void {
     )
   `)
 
-  // Design-only: webhooks table exists but no dispatch logic.
+  // In production: dispatches HTTP POST on matching events.
+  // For demo: table exists but no dispatch logic implemented.
   db.exec(`
     CREATE TABLE IF NOT EXISTS webhooks (
       id TEXT PRIMARY KEY,
@@ -415,10 +421,9 @@ function initializeSchema(db: Database.Database): void {
 // ─── Seed Check ─────────────────────────────────────────────────────
 
 export function ensureSeeded(seedFn?: (db: Database.Database) => void): void {
-  // On Vercel production, the bundled database is already seeded.
-  // Skip to avoid trying to seed a read-mostly environment and save cold-start time.
+  // On Vercel, seeding already happened in getDb(). Skip.
   if (isVercel) return
-
+  
   const db = getDb()
   const row = db.prepare('SELECT COUNT(*) as count FROM capabilities').get() as { count: number }
   if (row.count === 0) {
