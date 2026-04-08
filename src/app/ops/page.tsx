@@ -202,6 +202,29 @@ const OpsPage = (): React.ReactElement => {
       setShowBrief(true)
     }
   }, [])
+
+  // Escape key closes modal
+  useEffect(() => {
+    if (!showBrief) return
+    const handleEsc = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setShowBrief(false)
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [showBrief])
+
+  // Body scroll lock when modal is open
+  useEffect(() => {
+    if (showBrief) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [showBrief])
+
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     metrics: true,
     funnel: true,
@@ -638,18 +661,24 @@ const OpsPage = (): React.ReactElement => {
 
       {/* Weekly Brief Overlay */}
       {showBrief && (
-        <div className="fixed inset-0 z-50 bg-base/95 overflow-y-auto">
-          <div className="max-w-4xl mx-auto px-10 py-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-display text-lg font-semibold text-text-primary">Weekly GTM Brief</h2>
-              <button
-                onClick={() => setShowBrief(false)}
-                className="p-1.5 rounded-md text-text-secondary hover:text-text-primary hover:bg-elevated transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#C45A3C]/30"
-              >
-                <X size={18} />
-              </button>
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 backdrop-blur-sm p-4 md:p-8"
+          onClick={() => setShowBrief(false)}
+        >
+          <div
+            className="relative w-full max-w-4xl bg-white rounded-lg shadow-2xl my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowBrief(false)}
+              className="absolute top-4 right-4 p-2 hover:bg-[#F0EDE6] rounded-md transition-colors z-10"
+              aria-label="Close brief"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="max-h-[90vh] overflow-y-auto p-8">
+              <WeeklyBrief />
             </div>
-            <WeeklyBrief />
           </div>
         </div>
       )}
