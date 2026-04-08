@@ -105,23 +105,23 @@ Forge uses a three-layer data architecture:
 
 ## Screenshots
 
-### Operations — The CEO's Monday Dashboard
-![Operations Dashboard](./docs/screenshots/operations-dashboard.png)
+### Prospect Intelligence with ICP Breakdown
+![Prospect Intelligence](./docs/screenshots/prospect_intelligence.png)
 
-### Weekly GTM Brief
-![Weekly Brief](./docs/screenshots/weekly-brief.png)
+### Weekly Priority List
+![Weekly Priority List](./docs/screenshots/weeklypriority.png)
+
+### Operations — The CEO's Monday Dashboard
+![Operations Dashboard](./docs/screenshots/operations_dashboard.png)
 
 ### Solution Architect with Pricing Engine
-![Solution Architect](./docs/screenshots/solution-architect-pricing.png)
+![Solution Architect](./docs/screenshots/solution_architect.png)
 
-### Prospect Intelligence with ICP Breakdown
-![Prospect Intelligence](./docs/screenshots/prospect-intelligence.png)
+### GTM Command Center
+![GTM Command Center](./docs/screenshots/gtm_command.png)
 
-### Prediction Accuracy Dashboard
-![Prediction Accuracy](./docs/screenshots/prediction-accuracy.png)
-
-### Model Family Coverage
-![Model Coverage](./docs/screenshots/model-coverage.png)
+### Narrative Engine
+![Narrative Engine](./docs/screenshots/narrative_engine.png)
 
 ## Built By
 
