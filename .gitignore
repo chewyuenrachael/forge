@@ -21,8 +21,7 @@
 *.pem
 
 # database
-forge.db
-*.db
+# Normally .db files are ignored, but we commit forge.db for Vercel demo deployment
 *.db-shm
 *.db-wal
 *.db-journal
